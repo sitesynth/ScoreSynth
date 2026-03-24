@@ -14,7 +14,8 @@ const plans = [
     cta: "Get Free",
     href: "/app",
     features: [
-      "5 transcriptions per month",
+      "5 AI generations per month",
+      "Score editor: 1 project, 1 page",
       "Basic orchestrations",
       "PDF export",
       "AI preview playback",
@@ -30,7 +31,8 @@ const plans = [
     cta: "Get Solo",
     href: "/app",
     features: [
-      "30 transcriptions per month",
+      "25 AI generations per month",
+      "Score editor: unlimited projects & linked pieces",
       "All orchestration types",
       "PDF + MusicXML export",
       "Priority processing",
@@ -47,7 +49,9 @@ const plans = [
     cta: "Get Pro",
     href: "/app",
     features: [
-      "60 transcriptions per month",
+      "50 AI generations per month",
+      "Score editor: unlimited projects & linked pieces",
+      "Team: 3 seats included (+€20/extra user)",
       "All export formats (PDF, XML, MIDI)",
       "Priority processing (2x faster)",
       "Commercial license",

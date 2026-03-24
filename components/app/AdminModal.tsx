@@ -81,9 +81,9 @@ export default function AdminModal({ activeTab, onTabChange, onClose }: {
   const tabs: Tab[] = ["billing", "plan", "invoices"];
 
   const plans = [
-    { name: "Free", price: "€0", features: ["5 transcriptions/mo", "Basic orchestrations", "PDF export"] },
-    { name: "Solo", price: "€19", features: ["30 transcriptions/mo", "All orchestrations", "PDF + XML export"] },
-    { name: "Pro", price: "€49", features: ["60 transcriptions/mo", "All export formats", "Priority processing", "API access"] },
+    { name: "Free", price: "€0",  features: ["5 AI generations/mo",  "Editor: 1 project / 1 page",            "Basic orchestrations", "PDF export"] },
+    { name: "Solo", price: "€19", features: ["25 AI generations/mo", "Editor: unlimited projects & pieces",   "All orchestrations",   "PDF + XML export"] },
+    { name: "Pro",  price: "€49", features: ["50 AI generations/mo", "Editor: unlimited projects & pieces",   "3 seats (+€20/extra)", "All export formats",  "Priority processing", "API access"] },
   ];
 
   const rowStyle: React.CSSProperties = { padding: "16px 0", borderBottom: "1px solid rgba(255,255,255,0.06)" };
@@ -209,6 +209,53 @@ export default function AdminModal({ activeTab, onTabChange, onClose }: {
                   );
                 })}
               </div>
+
+              {/* ── Top up generations (Solo / Pro only) ── */}
+              {(currentPlan === "Solo" || currentPlan === "Pro") && (
+                <div style={{ marginTop: "28px", paddingTop: "24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p style={{ fontSize: "14px", fontWeight: 500, color: "#e8dbd8", marginBottom: "4px" }}>Top up generations</p>
+                  <p style={{ fontSize: "12px", color: "#6b5452", marginBottom: "16px" }}>Buy extra generations for this month.</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {[
+                      { name: "Starter",  count: 10,  price: "€4.90",  note: "€0.49 / gen" },
+                      { name: "Standard", count: 50,  price: "€19.90", note: "€0.40 / gen" },
+                      { name: "Pro Pack", count: 100, price: "€34.90", note: "€0.35 / gen", badge: "Best value" },
+                    ].map(pkg => (
+                      <div key={pkg.name} style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        padding: "12px 14px", borderRadius: "10px",
+                        background: "#1e1513", border: "1px solid rgba(255,255,255,0.06)",
+                        gap: "12px",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+                          <span style={{ fontSize: "13px", color: "#e8dbd8", fontWeight: 500 }}>{pkg.name}</span>
+                          {"badge" in pkg && (
+                            <span style={{ fontSize: "10px", color: "#c0392b", background: "rgba(192,57,43,0.1)", border: "1px solid rgba(192,57,43,0.2)", padding: "1px 7px", borderRadius: "20px", fontWeight: 600 }}>
+                              {pkg.badge}
+                            </span>
+                          )}
+                          <span style={{ fontSize: "11px", color: "#6b5452" }}>{pkg.count} gen</span>
+                        </div>
+                        <span style={{ fontSize: "11px", color: "#6b5452", whiteSpace: "nowrap" }}>{pkg.note}</span>
+                        <span style={{ fontSize: "14px", fontWeight: 600, color: "#fff", whiteSpace: "nowrap" }}>{pkg.price}</span>
+                        <button style={{
+                          padding: "6px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 600,
+                          background: "#fff", border: "none", color: "#211817", cursor: "pointer",
+                          transition: "opacity 0.15s", whiteSpace: "nowrap",
+                        }}
+                          onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+                          onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                        >
+                          Buy
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ marginTop: "12px", fontSize: "11px", color: "#6b5452" }}>
+                    Works with: Score generation · Transcription · Orchestration · MIDI export
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -394,7 +441,7 @@ export default function AdminModal({ activeTab, onTabChange, onClose }: {
         <SubModal title={`Switch to ${switchModal}`} onClose={() => setSwitchModal(null)}>
           <p style={{ fontSize: "13px", color: "#a89690", lineHeight: 1.6, marginBottom: "16px" }}>
             {switchModal === "Free"
-              ? "Switching to Free will immediately remove access to advanced features and your transcription quota will be reduced to 5/month."
+              ? "Switching to Free will immediately remove access to advanced features and your quota will be reduced to 5 AI generations/month."
               : `Switching to ${switchModal} will update your billing at your next renewal date.`}
           </p>
           <div style={{ padding: "12px 14px", background: "#1e1513", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.06)", marginBottom: "16px" }}>

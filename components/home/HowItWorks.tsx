@@ -14,13 +14,13 @@ const steps = [
     id: 2,
     title: "Write a prompt and select instruments",
     description: "Describe the orchestration style, select your instruments, and let AI do the rest.",
-    image: "/assets/writeprompt.svg",
+    image: "/assets/writeprompt.webp",
   },
   {
     id: 3,
     title: "Output: Ready-to-use sheet music",
     description: "Download your professionally arranged score as PDF, MusicXML, or MIDI.",
-    image: "/assets/readyscore.svg",
+    image: "/assets/readyscore.webp",
   },
 ];
 

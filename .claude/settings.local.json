@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.figma.com)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes --name scoresynth)",
+      "Read(//c/Users/mayya/Desktop/SITES/**)",
+      "Bash(npx create-next-app@latest scoresynth-app --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(cmd /c \"taskkill /IM node.exe /F\")",
+      "Bash(netstat -ano)"
+    ]
+  }
+}

@@ -161,17 +161,33 @@ export default function AdminPage() {
     );
   }
 
-  // ─── Guard: not logged in ──────────────────────────────────────────────────
+  // ─── Guard: not logged in — show inline login form ────────────────────────
   if (!user) {
     return (
-      <main style={{ minHeight: "100vh", background: "#211817", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px" }}>
-        <p style={{ color: "#a89690", fontSize: "15px" }}>Sign in to access the admin panel.</p>
-        <button
-          onClick={() => router.push("/")}
-          style={{ padding: "10px 24px", borderRadius: "8px", background: "#fff", color: "#211817", fontSize: "13px", fontWeight: 600, cursor: "pointer", border: "none" }}
-        >
-          Go home
-        </button>
+      <main style={{ minHeight: "100vh", background: "#211817", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: "100%", maxWidth: "360px", padding: "40px 32px", background: "#1a1210", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <p style={{ fontSize: "11px", color: "#6b5452", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "6px" }}>Admin</p>
+          <h1 style={{ fontFamily: "Georgia, serif", fontSize: "24px", color: "#fff", fontWeight: 400, marginBottom: "28px" }}>Sign in</h1>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              const supabase = createClient();
+              const { error } = await supabase.auth.signInWithPassword({
+                email: fd.get("email") as string,
+                password: fd.get("password") as string,
+              });
+              if (error) alert(error.message);
+            }}
+            style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+          >
+            <input name="email" type="email" placeholder="Email" required style={{ ...inputStyle }} />
+            <input name="password" type="password" placeholder="Password" required style={{ ...inputStyle }} />
+            <button type="submit" style={{ padding: "11px", borderRadius: "8px", background: "#c0392b", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", border: "none", marginTop: "4px" }}>
+              Sign in
+            </button>
+          </form>
+        </div>
       </main>
     );
   }

@@ -36,7 +36,7 @@ export default function ScoreDetailPage() {
       // Fetch score with author profile
       const { data: scoreData } = await supabase
         .from("scores")
-        .select("*, profiles(handle, display_name, avatar_url)")
+        .select("*, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
         .eq("id", id)
         .single();
 
@@ -49,7 +49,7 @@ export default function ScoreDetailPage() {
       // Fetch comments
       const { data: commentData } = await supabase
         .from("comments")
-        .select("*, profiles(handle, display_name, avatar_url)")
+        .select("*, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
         .eq("score_id", id)
         .order("created_at", { ascending: false });
 
@@ -95,7 +95,7 @@ export default function ScoreDetailPage() {
     const { data } = await supabase
       .from("comments")
       .insert({ score_id: score.id, author_id: user.id, text: commentText.trim() })
-      .select("*, profiles(handle, display_name, avatar_url)")
+      .select("*, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
       .single();
     if (data) setComments(prev => [data as Comment, ...prev]);
     setCommentText("");

@@ -29,13 +29,28 @@ function ScoreCard({ score }: { score: Score }) {
           display: "flex", flexDirection: "column",
         }}
       >
-        {/* Sheet music preview */}
-        <div style={{ background: "#f5f0eb", aspectRatio: "4/3", position: "relative", overflow: "hidden", flexShrink: 0 }}>
-          <Image src={score.cover_url || "/scoreimagedefaultpreview.png"} alt={score.title} fill style={{ objectFit: "cover" }} />
+        {/* Cover image or placeholder */}
+        <div style={{ aspectRatio: "4/3", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+          {score.cover_url ? (
+            <Image src={score.cover_url} alt={score.title} fill style={{ objectFit: "cover" }} />
+          ) : (
+            <div style={{
+              width: "100%", height: "100%",
+              background: "linear-gradient(135deg, #2a1f1e 0%, #1a1210 100%)",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px",
+            }}>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5">
+                <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+              </svg>
+              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.2)", fontFamily: "Georgia, serif", textAlign: "center", padding: "0 16px", lineHeight: 1.4 }}>
+                {score.composer || score.title}
+              </p>
+            </div>
+          )}
           {hovered && (
             <div style={{
               position: "absolute", inset: 0,
-              background: "rgba(33,24,23,0.45)",
+              background: "rgba(33,24,23,0.55)",
               display: "flex", alignItems: "center", justifyContent: "center",
               transition: "opacity 0.2s",
             }}>

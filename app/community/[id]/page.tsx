@@ -145,10 +145,10 @@ export default function ScoreDetailPage() {
 
           {/* Left — score preview + comments */}
           <div>
-            {/* Score image */}
+            {/* Score preview */}
             <div style={{ borderRadius: "16px", overflow: "hidden", background: "#f5f0eb", marginBottom: "32px" }}>
               <Image
-                src="/scoreimagedefaultpreview.png"
+                src={score.cover_url || "/scoreimagedefaultpreview.png"}
                 alt={score.title}
                 width={800} height={600}
                 style={{ width: "100%", height: "auto" }}

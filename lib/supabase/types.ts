@@ -28,6 +28,7 @@ export type Score = {
   pages: number;
   pdf_url: string | null;
   midi_url: string | null;
+  cover_url: string | null;
   author_id: string;
   created_at: string;
   updated_at: string;

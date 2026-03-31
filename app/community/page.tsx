@@ -31,7 +31,7 @@ function ScoreCard({ score }: { score: Score }) {
       >
         {/* Sheet music preview */}
         <div style={{ background: "#f5f0eb", aspectRatio: "4/3", position: "relative", overflow: "hidden", flexShrink: 0 }}>
-          <Image src="/scoreimagedefaultpreview.png" alt={score.title} fill style={{ objectFit: "cover" }} />
+          <Image src={score.cover_url || "/scoreimagedefaultpreview.png"} alt={score.title} fill style={{ objectFit: "cover" }} />
           {hovered && (
             <div style={{
               position: "absolute", inset: 0,

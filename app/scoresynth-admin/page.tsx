@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [priceDisplay, setPriceDisplay] = useState("");
   const [pages, setPages] = useState(1);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -99,7 +100,8 @@ export default function AdminPage() {
     setUploadSuccess(false);
 
     const supabase = createClient();
-    const pdfPath = `${user.id}/${Date.now()}-${pdfFile.name}`;
+    const ts = Date.now();
+    const pdfPath = `${user.id}/${ts}-${pdfFile.name}`;
 
     const { error: storageErr } = await supabase.storage
       .from("score-files")
@@ -109,6 +111,17 @@ export default function AdminPage() {
       setUploadError(`Storage error: ${storageErr.message}`);
       setUploading(false);
       return;
+    }
+
+    // Upload cover image if provided
+    let coverPublicUrl: string | null = null;
+    if (coverFile) {
+      const coverPath = `${user.id}/${ts}-${coverFile.name}`;
+      const { error: coverErr } = await supabase.storage.from("covers").upload(coverPath, coverFile);
+      if (!coverErr) {
+        const { data: urlData } = supabase.storage.from("covers").getPublicUrl(coverPath);
+        coverPublicUrl = urlData.publicUrl;
+      }
     }
 
     const { error: dbErr } = await supabase.from("scores").insert({
@@ -123,6 +136,7 @@ export default function AdminPage() {
       price_display: tag === "premium" && priceDisplay ? priceDisplay.trim() : null,
       pages,
       pdf_url: pdfPath,
+      cover_url: coverPublicUrl,
       author_id: user.id,
     });
 
@@ -136,7 +150,7 @@ export default function AdminPage() {
     // Reset form
     setTitle(""); setComposer(""); setPublisher(""); setDescription("");
     setDifficulty("Intermediate"); setCategory("piano"); setInstruments("");
-    setTag("free"); setPriceDisplay(""); setPages(1); setPdfFile(null);
+    setTag("free"); setPriceDisplay(""); setPages(1); setPdfFile(null); setCoverFile(null);
     setUploadSuccess(true);
     setTimeout(() => setUploadSuccess(false), 4000);
     loadScores();
@@ -289,6 +303,38 @@ export default function AdminPage() {
                   onChange={e => setPages(Number(e.target.value))}
                   style={{ ...inputStyle, width: "80px" }}
                 />
+              </div>
+
+              {/* Cover image picker */}
+              <div>
+                <label style={{ fontSize: "12px", color: "#6b5452", marginBottom: "6px", display: "block" }}>Cover Image (PNG/JPG)</label>
+                <label style={{
+                  display: "flex", alignItems: "center", gap: "10px",
+                  padding: "10px 14px", borderRadius: "8px", cursor: "pointer",
+                  background: "#2a1f1e", border: "1px dashed rgba(255,255,255,0.15)",
+                  fontSize: "13px", color: coverFile ? "#e8dbd8" : "#6b5452",
+                }}>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  {coverFile ? coverFile.name : "Choose image…"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={e => setCoverFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                {coverFile && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={URL.createObjectURL(coverFile)}
+                    alt="Cover preview"
+                    style={{ marginTop: "8px", width: "100%", borderRadius: "8px", maxHeight: "160px", objectFit: "cover" }}
+                  />
+                )}
               </div>
 
               {/* PDF picker */}

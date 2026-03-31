@@ -54,6 +54,11 @@ export default function AdminPage() {
   const [loadingScores, setLoadingScores] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingPdfUrl, setEditingPdfUrl] = useState<string | null>(null);
+  const [editingCoverUrl, setEditingCoverUrl] = useState<string | null>(null);
+
   // ─── Check if logged-in user is the admin ─────────────────────────────────
   useEffect(() => {
     if (authLoading) return;
@@ -156,6 +161,79 @@ export default function AdminPage() {
     loadScores();
   };
 
+  // ─── Start Edit ───────────────────────────────────────────────────────────
+  const startEdit = (s: Score) => {
+    setEditingId(s.id as string);
+    setEditingPdfUrl(s.pdf_url ?? null);
+    setEditingCoverUrl(s.cover_url ?? null);
+    setTitle(s.title);
+    setComposer(s.composer ?? "");
+    setPublisher(s.publisher ?? "");
+    setDescription(s.description ?? "");
+    setDifficulty(s.difficulty ?? "Intermediate");
+    setCategory(s.category ?? "piano");
+    setInstruments((s.instruments ?? []).join(", "));
+    setTag((s.tag as "free" | "premium") ?? "free");
+    setPriceDisplay(s.price_display ?? "");
+    setPages(s.pages ?? 1);
+    setPdfFile(null);
+    setCoverFile(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null); setEditingPdfUrl(null); setEditingCoverUrl(null);
+    setTitle(""); setComposer(""); setPublisher(""); setDescription("");
+    setDifficulty("Intermediate"); setCategory("piano"); setInstruments("");
+    setTag("free"); setPriceDisplay(""); setPages(1); setPdfFile(null); setCoverFile(null);
+  };
+
+  // ─── Update ───────────────────────────────────────────────────────────────
+  const handleUpdate = async () => {
+    if (!user || !editingId) return;
+    if (!title.trim()) { setUploadError("Title is required."); return; }
+
+    setUploading(true);
+    setUploadError(null);
+    const supabase = createClient();
+    const ts = Date.now();
+
+    let newPdfUrl = editingPdfUrl;
+    if (pdfFile) {
+      const pdfPath = `${user.id}/${ts}-${pdfFile.name}`;
+      const { error: storageErr } = await supabase.storage.from("score-files").upload(pdfPath, pdfFile);
+      if (storageErr) { setUploadError(`Storage error: ${storageErr.message}`); setUploading(false); return; }
+      newPdfUrl = pdfPath;
+    }
+
+    let newCoverUrl = editingCoverUrl;
+    if (coverFile) {
+      const coverPath = `${user.id}/${ts}-${coverFile.name}`;
+      const { error: coverErr } = await supabase.storage.from("covers").upload(coverPath, coverFile);
+      if (!coverErr) {
+        const { data: urlData } = supabase.storage.from("covers").getPublicUrl(coverPath);
+        newCoverUrl = urlData.publicUrl;
+      }
+    }
+
+    const { error: dbErr } = await supabase.from("scores").update({
+      title: title.trim(), composer: composer.trim(), publisher: publisher.trim(),
+      description: description.trim(), difficulty, category,
+      instruments: instruments.split(",").map(s => s.trim()).filter(Boolean),
+      tag, price_display: tag === "premium" && priceDisplay ? priceDisplay.trim() : null,
+      pages, pdf_url: newPdfUrl, cover_url: newCoverUrl,
+      updated_at: new Date().toISOString(),
+    }).eq("id", editingId);
+
+    setUploading(false);
+    if (dbErr) { setUploadError(`Database error: ${dbErr.message}`); return; }
+
+    cancelEdit();
+    setUploadSuccess(true);
+    setTimeout(() => setUploadSuccess(false), 4000);
+    loadScores();
+  };
+
   // ─── Delete ───────────────────────────────────────────────────────────────
   const handleDelete = async (scoreId: string) => {
     if (!confirm("Delete this score? This cannot be undone.")) return;
@@ -235,9 +313,16 @@ export default function AdminPage() {
 
           {/* ── Upload Form ── */}
           <div style={{ background: "#1e1513", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.07)", padding: "28px" }}>
-            <h2 style={{ fontFamily: "Georgia, serif", fontSize: "20px", color: "#fff", fontWeight: 400, marginBottom: "20px" }}>
-              Add score
-            </h2>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+              <h2 style={{ fontFamily: "Georgia, serif", fontSize: "20px", color: "#fff", fontWeight: 400 }}>
+                {editingId ? "Edit score" : "Add score"}
+              </h2>
+              {editingId && (
+                <button onClick={cancelEdit} style={{ fontSize: "12px", color: "#6b5452", background: "none", border: "none", cursor: "pointer" }}>
+                  Cancel
+                </button>
+              )}
+            </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <input type="text" placeholder="Title *" value={title} onChange={e => setTitle(e.target.value)} style={inputStyle} />
@@ -370,7 +455,7 @@ export default function AdminPage() {
             )}
 
             <button
-              onClick={handleUpload}
+              onClick={editingId ? handleUpdate : handleUpload}
               disabled={uploading}
               style={{
                 width: "100%", marginTop: "16px", padding: "12px", borderRadius: "10px",
@@ -379,7 +464,7 @@ export default function AdminPage() {
                 opacity: uploading ? 0.7 : 1, transition: "opacity 0.15s",
               }}
             >
-              {uploading ? "Uploading…" : "Publish score"}
+              {uploading ? "Saving…" : editingId ? "Save changes" : "Publish score"}
             </button>
           </div>
 
@@ -423,6 +508,20 @@ export default function AdminPage() {
                         {s.composer || "—"} · {s.tag === "premium" ? "premium" : "free"} · {s.likes_count} ♥ · {s.views_count} views
                       </p>
                     </div>
+
+                    {/* Edit */}
+                    <button
+                      onClick={() => startEdit(s)}
+                      title="Edit score"
+                      style={{
+                        padding: "6px 10px", borderRadius: "6px",
+                        background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                        color: "#a89690", fontSize: "12px", cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                    >
+                      Edit
+                    </button>
 
                     {/* Delete */}
                     <button

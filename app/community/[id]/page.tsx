@@ -27,6 +27,7 @@ export default function ScoreDetailPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authIntent, setAuthIntent] = useState<"download" | "purchase">("download");
   const [loadingScore, setLoadingScore] = useState(true);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -43,6 +44,13 @@ export default function ScoreDetailPage() {
       if (scoreData) {
         setScore(scoreData as Score);
         setLikeCount(scoreData.likes_count);
+        // Generate signed URL for PDF preview
+        if (scoreData.pdf_url) {
+          const { data: signedData } = await supabase.storage
+            .from("score-files")
+            .createSignedUrl(scoreData.pdf_url, 3600);
+          if (signedData?.signedUrl) setPdfPreviewUrl(signedData.signedUrl);
+        }
       }
       setLoadingScore(false);
 
@@ -145,15 +153,43 @@ export default function ScoreDetailPage() {
 
           {/* Left — score preview + comments */}
           <div>
-            {/* Score preview */}
-            <div style={{ borderRadius: "16px", overflow: "hidden", background: "#f5f0eb", marginBottom: "32px" }}>
-              <Image
-                src={score.cover_url || "/scoreimagedefaultpreview.png"}
-                alt={score.title}
-                width={800} height={600}
-                style={{ width: "100%", height: "auto" }}
-              />
-            </div>
+            {/* Cover image */}
+            {score.cover_url && (
+              <div style={{ borderRadius: "16px", overflow: "hidden", background: "#f5f0eb", marginBottom: "16px" }}>
+                <Image
+                  src={score.cover_url}
+                  alt={score.title}
+                  width={800} height={400}
+                  style={{ width: "100%", height: "auto" }}
+                />
+              </div>
+            )}
+
+            {/* PDF Preview */}
+            {pdfPreviewUrl && (
+              <div style={{ borderRadius: "16px", overflow: "hidden", background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)", marginBottom: "32px" }}>
+                <p style={{ fontSize: "11px", color: "#6b5452", padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  Sheet music preview
+                </p>
+                <iframe
+                  src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0&page=1&view=FitH`}
+                  style={{ width: "100%", height: "600px", border: "none", background: "#fff" }}
+                  title="Sheet music preview"
+                />
+              </div>
+            )}
+
+            {/* Fallback if no cover and no PDF preview */}
+            {!score.cover_url && !pdfPreviewUrl && (
+              <div style={{ borderRadius: "16px", overflow: "hidden", background: "#f5f0eb", marginBottom: "32px" }}>
+                <Image
+                  src="/scoreimagedefaultpreview.png"
+                  alt={score.title}
+                  width={800} height={600}
+                  style={{ width: "100%", height: "auto" }}
+                />
+              </div>
+            )}
 
             {/* Comments — hidden until main app is ready (flip COMMENTS_ENABLED to true to re-enable) */}
             {COMMENTS_ENABLED && (

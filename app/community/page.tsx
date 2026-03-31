@@ -110,7 +110,7 @@ export default function CommunityPage() {
     async function fetchScores() {
       const { data } = await supabase
         .from("scores")
-        .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, profiles(handle, display_name, avatar_url)")
+        .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, profiles(handle, display_name, avatar_url)")
         .order("likes_count", { ascending: false });
 
       if (data) {

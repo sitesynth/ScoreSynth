@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useAuth } from "@/lib/supabase/useAuth";
 
 const navLinks = [
   { label: "How It Works", href: "/#how-it-works" },
@@ -14,6 +15,7 @@ const navLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, loading } = useAuth();
 
   return (
     <>
@@ -74,19 +76,37 @@ export default function Navbar() {
             >
               Contact sales
             </Link>
-            <Link
-              href="/app"
-              style={{
-                fontSize: "13px", fontWeight: 500,
-                padding: "8px 18px", borderRadius: "8px",
-                background: "#fff", color: "#211817",
-                transition: "opacity 0.15s", textDecoration: "none",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
-              onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-            >
-              Try for Free
-            </Link>
+            {!loading && (
+              user ? (
+                <Link
+                  href="/appkalababasau"
+                  style={{
+                    fontSize: "13px", fontWeight: 500,
+                    padding: "8px 18px", borderRadius: "8px",
+                    background: "#fff", color: "#211817",
+                    transition: "opacity 0.15s", textDecoration: "none",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                >
+                  Open App
+                </Link>
+              ) : (
+                <Link
+                  href="/app"
+                  style={{
+                    fontSize: "13px", fontWeight: 500,
+                    padding: "8px 18px", borderRadius: "8px",
+                    background: "#fff", color: "#211817",
+                    transition: "opacity 0.15s", textDecoration: "none",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                >
+                  Try for Free
+                </Link>
+              )
+            )}
           </div>
 
           {/* Mobile toggle */}
@@ -145,7 +165,7 @@ export default function Navbar() {
             Contact sales
           </Link>
           <Link
-            href="/app"
+            href={user ? "/appkalababasau" : "/app"}
             onClick={() => setMobileOpen(false)}
             style={{
               display: "block", marginTop: "10px",
@@ -155,7 +175,7 @@ export default function Navbar() {
               textAlign: "center", textDecoration: "none",
             }}
           >
-            Try for Free
+            {user ? "Open App" : "Try for Free"}
           </Link>
         </div>
       )}

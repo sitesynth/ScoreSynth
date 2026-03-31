@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MOCK_USER, MOCK_PROJECTS, MOCK_RECENTS } from "@/lib/app-data";
+import { MOCK_PROJECTS, MOCK_RECENTS } from "@/lib/app-data";
 import SettingsModal from "@/components/app/SettingsModal";
 import AdminModal from "@/components/app/AdminModal";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/supabase/useAuth";
+import type { Profile } from "@/lib/supabase/types";
 
 function getBreadcrumb(pathname: string) {
   if (pathname === "/appkalababasau") return "Recents";
@@ -20,7 +23,21 @@ function getBreadcrumb(pathname: string) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [userDropOpen, setUserDropOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    supabase.from("profiles").select("*").eq("id", user.id).single()
+      .then(({ data }) => { if (data) setProfile(data as Profile); });
+  }, [user]);
+
+  const displayName = profile?.display_name || user?.email?.split("@")[0] || "User";
+  const initials = displayName[0].toUpperCase();
+  const handle = profile?.handle ? `@${profile.handle}` : user?.email ?? "";
+  const avatarUrl = profile?.avatar_url;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"account" | "community" | "notifications" | "security">("account");
   const [adminOpen, setAdminOpen] = useState(false);
@@ -82,10 +99,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               width: "28px", height: "28px", borderRadius: "50%", background: "#c0392b",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "12px", fontWeight: 600, color: "#fff", flexShrink: 0,
+              overflow: "hidden",
             }}>
-              {MOCK_USER.initials}
+              {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
             </div>
-            <span style={{ fontSize: "13px", fontWeight: 500, color: "#fff" }}>{MOCK_USER.name}</span>
+            <span style={{ fontSize: "13px", fontWeight: 500, color: "#fff" }}>{displayName}</span>
             <svg width="12" height="12" fill="none" stroke="#a89690" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M6 9l6 6 6-6" />
             </svg>
@@ -95,7 +113,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             fontSize: "10px", fontWeight: 700, padding: "2px 7px", borderRadius: "4px",
             background: "#1d4ed8", color: "#fff", marginLeft: "4px",
           }}>
-            {MOCK_USER.plan}
+            Pro
           </span>
 
           <button
@@ -352,11 +370,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 width: "56px", height: "56px", borderRadius: "50%", background: "#c0392b",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "22px", fontWeight: 600, color: "#fff", marginBottom: "10px",
+                overflow: "hidden",
               }}>
-                {MOCK_USER.initials}
+                {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
               </div>
-              <p style={{ fontSize: "14px", fontWeight: 500, color: "#fff", marginBottom: "3px" }}>{MOCK_USER.name}</p>
-              <p style={{ fontSize: "12px", color: "#6b5452" }}>{MOCK_USER.email}</p>
+              <p style={{ fontSize: "14px", fontWeight: 500, color: "#fff", marginBottom: "3px" }}>{displayName}</p>
+              <p style={{ fontSize: "12px", color: "#6b5452" }}>{user?.email}</p>
             </div>
 
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "10px", display: "flex", flexDirection: "column", gap: "1px" }}>
@@ -390,24 +409,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "12px", marginTop: "8px" }}>
               <p style={{ fontSize: "11px", color: "#6b5452", paddingLeft: "10px", marginBottom: "8px" }}>Your Community Profile</p>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px" }}>
-                <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#c0392b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 600, color: "#fff" }}>
-                  {MOCK_USER.initials}
+                <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#c0392b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 600, color: "#fff", overflow: "hidden" }}>
+                  {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
                 </div>
                 <div>
-                  <p style={{ fontSize: "13px", color: "#e8dbd8" }}>{MOCK_USER.name}</p>
-                  <p style={{ fontSize: "11px", color: "#6b5452" }}>{MOCK_USER.handle}</p>
+                  <p style={{ fontSize: "13px", color: "#e8dbd8" }}>{displayName}</p>
+                  <p style={{ fontSize: "11px", color: "#6b5452" }}>{handle}</p>
                 </div>
               </div>
             </div>
 
             <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "10px", marginTop: "8px" }}>
-              <button style={{
-                display: "flex", alignItems: "center", gap: "10px",
-                padding: "9px 10px", borderRadius: "8px",
-                background: "none", border: "none", cursor: "pointer",
-                color: "#a89690", fontSize: "13px", width: "100%", textAlign: "left",
-                transition: "background 0.15s, color 0.15s",
-              }}
+              <button
+                onClick={async () => {
+                  const supabase = createClient();
+                  await supabase.auth.signOut();
+                  router.push("/");
+                }}
+                style={{
+                  display: "flex", alignItems: "center", gap: "10px",
+                  padding: "9px 10px", borderRadius: "8px",
+                  background: "none", border: "none", cursor: "pointer",
+                  color: "#a89690", fontSize: "13px", width: "100%", textAlign: "left",
+                  transition: "background 0.15s, color 0.15s",
+                }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#fff"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#a89690"; }}
               >
@@ -425,7 +450,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           activeTab={settingsTab}
           onTabChange={setSettingsTab}
           onClose={() => setSettingsOpen(false)}
-          user={MOCK_USER}
+          user={{ name: displayName, email: user?.email ?? "", handle, initials, createdAt: profile?.created_at ?? "" }}
         />
       )}
       {adminOpen && (

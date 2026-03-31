@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MOCK_USER } from "@/lib/app-data";
-import { ALL_SCORES, SCORE_TAGS } from "@/lib/scores";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/supabase/useAuth";
+import type { Score, Profile } from "@/lib/supabase/types";
+import { SCORE_TAGS } from "@/lib/scores";
+import UploadScoreModal from "@/components/community/UploadScoreModal";
 
 const BANNER_GRADIENTS = [
   "linear-gradient(135deg, #7a2318 0%, #c0392b 60%, #8b2c1e 100%)",
@@ -21,7 +24,6 @@ function InlineField({ value, onChange, placeholder, style, multiline }: {
 }) {
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
-
   const sharedStyle: React.CSSProperties = {
     background: "none", border: "none", outline: "none",
     color: value ? "#e8dbd8" : "#3d2a28", fontSize: "inherit",
@@ -31,44 +33,86 @@ function InlineField({ value, onChange, placeholder, style, multiline }: {
     resize: "none",
     ...style,
   };
-
   if (multiline) return (
-    <textarea
-      ref={ref as React.RefObject<HTMLTextAreaElement>}
-      value={value} placeholder={placeholder}
-      onChange={e => onChange(e.target.value)}
-      onFocus={() => setEditing(true)}
-      onBlur={() => setEditing(false)}
-      rows={2}
-      style={{ ...sharedStyle, display: "block" }}
-    />
+    <textarea ref={ref as React.RefObject<HTMLTextAreaElement>} value={value} placeholder={placeholder}
+      onChange={e => onChange(e.target.value)} onFocus={() => setEditing(true)} onBlur={() => setEditing(false)}
+      rows={2} style={{ ...sharedStyle, display: "block" }} />
   );
-
   return (
-    <input
-      ref={ref as React.RefObject<HTMLInputElement>}
-      type="text" value={value} placeholder={placeholder}
-      onChange={e => onChange(e.target.value)}
-      onFocus={() => setEditing(true)}
-      onBlur={() => setEditing(false)}
-      style={sharedStyle}
-    />
+    <input ref={ref as React.RefObject<HTMLInputElement>} type="text" value={value} placeholder={placeholder}
+      onChange={e => onChange(e.target.value)} onFocus={() => setEditing(true)} onBlur={() => setEditing(false)}
+      style={sharedStyle} />
   );
 }
 
 function ProfileTab() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [profileTab, setProfileTab] = useState<"resources" | "saved" | "metrics">("resources");
   const [bannerGradient, setBannerGradient] = useState(BANNER_GRADIENTS[0]);
   const [showBannerPicker, setShowBannerPicker] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarHover, setAvatarHover] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [displayName, setDisplayName] = useState(MOCK_USER.name);
+  const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
   const [instagram, setInstagram] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [userScores, setUserScores] = useState<Score[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
+      if (data) {
+        setProfile(data as Profile);
+        setDisplayName(data.display_name || "");
+        setBio(data.bio || "");
+        setLocation(data.location || "");
+        setWebsite(data.website || "");
+        setTwitter(data.twitter || "");
+        setInstagram(data.instagram || "");
+        if (data.banner_gradient) setBannerGradient(data.banner_gradient);
+        if (data.avatar_url) setAvatarUrl(data.avatar_url);
+      }
+    });
+    supabase.from("scores").select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at")
+      .eq("author_id", user.id).order("created_at", { ascending: false })
+      .then(({ data }) => setUserScores((data as Score[]) ?? []));
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaving(true);
+    const supabase = createClient();
+    await supabase.from("profiles").update({
+      display_name: displayName,
+      bio,
+      location,
+      website,
+      twitter,
+      instagram,
+      banner_gradient: bannerGradient,
+    }).eq("id", user.id);
+    setSaving(false);
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!user) return;
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/avatar.${ext}`;
+    const supabase = createClient();
+    await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    setAvatarUrl(data.publicUrl);
+    await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id);
+  };
+
+  const handle = profile?.handle ?? user?.email?.split("@")[0] ?? "";
+  const initials = (displayName || handle || "?")[0].toUpperCase();
 
   return (
     <div>
@@ -84,15 +128,13 @@ function ProfileTab() {
           Edit banner
         </div>
         {showBannerPicker && (
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              position: "absolute", bottom: "-58px", right: "14px", zIndex: 20,
-              background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "10px", padding: "8px 10px",
-              display: "flex", gap: "6px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            position: "absolute", bottom: "-58px", right: "14px", zIndex: 20,
+            background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "10px", padding: "8px 10px",
+            display: "flex", gap: "6px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+          }}>
             {BANNER_GRADIENTS.map((g, i) => (
               <div key={i} onClick={() => { setBannerGradient(g); setShowBannerPicker(false); }} style={{
                 width: "28px", height: "28px", borderRadius: "6px", background: g,
@@ -107,10 +149,9 @@ function ProfileTab() {
       {/* Avatar + name row */}
       <div style={{ padding: "0 28px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: "-30px", marginBottom: "16px" }}>
-          {/* Avatar */}
           <div style={{ position: "relative" }}>
             <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }}
-              onChange={e => { const f = e.target.files?.[0]; if (f) setAvatarUrl(URL.createObjectURL(f)); }} />
+              onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }} />
             <div
               onClick={() => avatarInputRef.current?.click()}
               onMouseEnter={() => setAvatarHover(true)}
@@ -124,7 +165,7 @@ function ProfileTab() {
                 cursor: "pointer", overflow: "hidden", position: "relative",
                 transition: "border-color 0.15s",
               }}>
-              {avatarUrl ? <img src={avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : MOCK_USER.initials}
+              {avatarUrl ? <img src={avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
               {avatarHover && (
                 <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3px" }}>
                   <svg width="16" height="16" fill="none" stroke="#fff" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -133,27 +174,30 @@ function ProfileTab() {
               )}
             </div>
           </div>
+          <button onClick={handleSave} disabled={saving} style={{
+            padding: "6px 16px", borderRadius: "8px", background: "#fff", color: "#211817",
+            fontSize: "12px", fontWeight: 600, cursor: "pointer", border: "none",
+            opacity: saving ? 0.7 : 1,
+          }}>
+            {saving ? "Saving…" : "Save profile"}
+          </button>
         </div>
 
         {/* Two-column layout */}
         <div style={{ display: "flex", gap: "32px" }}>
           {/* Left: profile info */}
           <div style={{ width: "200px", flexShrink: 0 }}>
-            {/* Name */}
             <div style={{ marginBottom: "2px" }}>
               <InlineField value={displayName} onChange={setDisplayName} placeholder="Your name"
                 style={{ fontSize: "18px", fontWeight: 600, color: "#fff" }} />
             </div>
-            {/* Handle */}
-            <p style={{ fontSize: "12px", color: "#6b5452", marginBottom: "14px" }}>{MOCK_USER.handle}</p>
+            <p style={{ fontSize: "12px", color: "#6b5452", marginBottom: "14px" }}>@{handle}</p>
 
-            {/* Followers */}
             <div style={{ display: "flex", gap: "14px", marginBottom: "14px" }}>
               <span style={{ fontSize: "13px", color: "#a89690" }}><b style={{ color: "#e8dbd8" }}>0</b> followers</span>
               <span style={{ fontSize: "13px", color: "#a89690" }}><b style={{ color: "#e8dbd8" }}>0</b> following</span>
             </div>
 
-            {/* Editable fields */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
               {[
                 { val: bio, set: setBio, placeholder: "Add a description", icon: "M4 6h16M4 12h16M4 18h7" },
@@ -172,7 +216,6 @@ function ProfileTab() {
               ))}
             </div>
 
-            {/* Public profile card */}
             <div style={{
               display: "flex", alignItems: "flex-start", gap: "8px",
               background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)",
@@ -183,14 +226,15 @@ function ProfileTab() {
               </svg>
               <div>
                 <p style={{ fontSize: "11px", color: "#6b5452", marginBottom: "2px" }}>Your profile is visible to the public at</p>
-                <span style={{ fontSize: "11px", color: "#6b8fbd" }}>scoresynth.com/{MOCK_USER.handle}</span>
+                <Link href={`/community/user/${handle}`} style={{ fontSize: "11px", color: "#6b8fbd", textDecoration: "none" }}>
+                  scoresynth.com/community/user/{handle}
+                </Link>
               </div>
             </div>
           </div>
 
           {/* Right: tabs + content */}
           <div style={{ flex: 1 }}>
-            {/* Sub-tabs */}
             <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: "24px" }}>
               {(["resources", "saved", "metrics"] as const).map(t => (
                 <button key={t} onClick={() => setProfileTab(t)} style={{
@@ -213,21 +257,29 @@ function ProfileTab() {
             </div>
 
             {profileTab === "resources" && (
-              <div style={{ textAlign: "center", paddingTop: "32px" }}>
-                <svg width="64" height="64" viewBox="0 0 80 80" fill="none" style={{ margin: "0 auto 16px", display: "block" }}>
-                  <rect x="10" y="15" width="36" height="46" rx="4" fill="#2a1f1e" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"/>
-                  <rect x="20" y="10" width="36" height="46" rx="4" fill="#362420" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"/>
-                  <rect x="30" y="5" width="36" height="46" rx="4" fill="#3d2a28" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5"/>
-                  <line x1="38" y1="18" x2="58" y2="18" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round"/>
-                  <line x1="38" y1="24" x2="58" y2="24" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" strokeLinecap="round"/>
-                  <line x1="38" y1="30" x2="50" y2="30" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                <p style={{ fontSize: "14px", color: "#6b5452", marginBottom: "6px" }}>You don&apos;t have any resources yet.</p>
-                <p style={{ fontSize: "12px", color: "#3d2a28" }}>
-                  But getting started is easy,{" "}
-                  <span style={{ color: "#6b8fbd", cursor: "pointer" }}>learn how to publish a resource</span>
-                </p>
-              </div>
+              userScores.length > 0 ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                  {userScores.map(s => (
+                    <Link key={s.id} href={`/community/${s.id}`} style={{ textDecoration: "none", fontSize: "13px", color: "#e8dbd8", padding: "10px 12px", borderRadius: "8px", background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)", display: "block" }}>
+                      <p style={{ marginBottom: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</p>
+                      <p style={{ fontSize: "11px", color: "#6b5452" }}>{s.likes_count} likes · {s.views_count} views</p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", paddingTop: "32px" }}>
+                  <svg width="64" height="64" viewBox="0 0 80 80" fill="none" style={{ margin: "0 auto 16px", display: "block" }}>
+                    <rect x="10" y="15" width="36" height="46" rx="4" fill="#2a1f1e" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"/>
+                    <rect x="20" y="10" width="36" height="46" rx="4" fill="#362420" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"/>
+                    <rect x="30" y="5" width="36" height="46" rx="4" fill="#3d2a28" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5"/>
+                    <line x1="38" y1="18" x2="58" y2="18" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="38" y1="24" x2="58" y2="24" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="38" y1="30" x2="50" y2="30" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  <p style={{ fontSize: "14px", color: "#6b5452", marginBottom: "6px" }}>You don&apos;t have any resources yet.</p>
+                  <p style={{ fontSize: "12px", color: "#3d2a28" }}>Upload a score to get started.</p>
+                </div>
+              )
             )}
             {profileTab === "saved" && (
               <div style={{ textAlign: "center", paddingTop: "32px" }}>
@@ -246,9 +298,6 @@ function ProfileTab() {
   );
 }
 
-const PIANO_SCORES = ALL_SCORES.filter(s => s.category === "piano");
-const BRASS_SCORES = ALL_SCORES.filter(s => s.category === "brass");
-
 const CATEGORY_CARDS = [
   { name: "Piano", desc: "Solo works, concertos, and accompaniment scores", image: "/categories/piano.png" },
   { name: "Strings", desc: "Violin, cello, viola, and ensemble arrangements", image: "/categories/strings-v2.png" },
@@ -258,8 +307,9 @@ const CATEGORY_CARDS = [
   { name: "Choir", desc: "Vocal ensembles, a cappella and choral arrangements", image: "/categories/choir.png" },
 ];
 
-function ScoreCard({ score }: { score: typeof ALL_SCORES[0] }) {
+function ScoreCard({ score }: { score: Score }) {
   const [hovered, setHovered] = useState(false);
+  const handle = score.profiles?.handle ?? "";
   return (
     <Link href={`/community/${score.id}`} style={{ textDecoration: "none" }}>
       <div
@@ -286,27 +336,27 @@ function ScoreCard({ score }: { score: typeof ALL_SCORES[0] }) {
         <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
           <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{score.title}</p>
           <Link
-            href={`/app/community/user/${score.author}`}
+            href={`/community/user/${handle}`}
             onClick={e => e.stopPropagation()}
             style={{ fontSize: "11px", color: "#6b5452", textDecoration: "none", transition: "color 0.15s" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#a89690")}
             onMouseLeave={e => (e.currentTarget.style.color = "#6b5452")}
           >
-            @{score.author}
+            @{handle}
           </Link>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", gap: "12px" }}>
               <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
                 <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-                {score.likes.toLocaleString()}
+                {score.likes_count.toLocaleString()}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
                 <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                {score.views.toLocaleString()}
+                {score.views_count.toLocaleString()}
               </span>
             </div>
             <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.06)", color: "#a89690" }}>
-              {score.tag === "free" ? "Free" : score.price ?? "Premium"}
+              {score.tag === "free" ? "Free" : score.price_display ?? "Premium"}
             </span>
           </div>
         </div>
@@ -319,13 +369,38 @@ export default function AppCommunityPage() {
   const [tab, setTab] = useState<"browse" | "saved" | "profile">("browse");
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState("All");
+  const [pianoScores, setPianoScores] = useState<Score[]>([]);
+  const [brassScores, setBrassScores] = useState<Score[]>([]);
+  const [loadingScores, setLoadingScores] = useState(true);
+  const [showUpload, setShowUpload] = useState(false);
 
-  const filteredPiano = PIANO_SCORES.filter(s =>
-    query === "" || s.title.toLowerCase().includes(query.toLowerCase()) || s.composer?.toLowerCase().includes(query.toLowerCase())
-  );
-  const filteredBrass = BRASS_SCORES.filter(s =>
-    query === "" || s.title.toLowerCase().includes(query.toLowerCase()) || s.composer?.toLowerCase().includes(query.toLowerCase())
-  );
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("scores")
+      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, instruments, pages, publisher, description, difficulty, midi_url, pdf_url, created_at, updated_at, profiles(handle, display_name, avatar_url)")
+      .order("likes_count", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          const scores = data as unknown as Score[];
+          setPianoScores(scores.filter(s => s.category === "piano"));
+          setBrassScores(scores.filter(s => s.category === "brass"));
+        }
+        setLoadingScores(false);
+      });
+  }, [showUpload]); // re-fetch after upload
+
+  const filterScores = (scores: Score[]) => {
+    if (!query) return scores;
+    const q = query.toLowerCase();
+    return scores.filter(s =>
+      s.title.toLowerCase().includes(q) ||
+      s.composer.toLowerCase().includes(q)
+    );
+  };
+
+  const filteredPiano = filterScores(pianoScores);
+  const filteredBrass = filterScores(brassScores);
 
   return (
     <div style={{ minHeight: "100%" }}>
@@ -351,22 +426,24 @@ export default function AppCommunityPage() {
       {/* ── BROWSE ── */}
       {tab === "browse" && (
         <div>
-          {/* Search + tags hero */}
           <div style={{ padding: "36px 28px 28px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <div style={{ position: "relative", marginBottom: "16px" }}>
-              <svg style={{ position: "absolute", left: "13px", top: "50%", transform: "translateY(-50%)", color: "#6b5452", pointerEvents: "none" }}
-                width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-              </svg>
-              <input
-                type="text" placeholder="Search scores, composers, arrangements…"
-                value={query} onChange={e => setQuery(e.target.value)}
-                style={{
-                  width: "100%", padding: "10px 14px 10px 38px", borderRadius: "8px",
-                  background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
-                  color: "#fff", fontSize: "13px", outline: "none", boxSizing: "border-box",
-                }}
-              />
+            <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+              <div style={{ position: "relative", flex: 1 }}>
+                <svg style={{ position: "absolute", left: "13px", top: "50%", transform: "translateY(-50%)", color: "#6b5452", pointerEvents: "none" }}
+                  width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input
+                  type="text" placeholder="Search scores, composers, arrangements…"
+                  value={query} onChange={e => setQuery(e.target.value)}
+                  style={{
+                    width: "100%", padding: "10px 14px 10px 38px", borderRadius: "8px",
+                    background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                    color: "#fff", fontSize: "13px", outline: "none", boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              {/* Upload button intentionally removed — scores are managed via /scoresynth-admin */}
             </div>
             <div style={{ display: "flex", gap: "7px", flexWrap: "wrap" }}>
               {SCORE_TAGS.map(tag => (
@@ -384,18 +461,20 @@ export default function AppCommunityPage() {
             </div>
           </div>
 
-          {/* Sections */}
           <div style={{ padding: "32px 28px 48px" }}>
-
             {/* Best of Piano */}
             <section style={{ marginBottom: "48px" }}>
               <div style={{ marginBottom: "18px" }}>
                 <h2 style={{ fontFamily: "Georgia, serif", fontSize: "20px", color: "#fff", marginBottom: "4px" }}>Best of Piano</h2>
                 <p style={{ fontSize: "12px", color: "#7a6360" }}>The most searched and loved piano scores in the community.</p>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
-                {(filteredPiano.length > 0 ? filteredPiano : PIANO_SCORES).map(s => <ScoreCard key={s.id} score={s} />)}
-              </div>
+              {loadingScores ? (
+                <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+                  {filteredPiano.map(s => <ScoreCard key={s.id} score={s} />)}
+                </div>
+              )}
             </section>
 
             {/* Popular categories */}
@@ -440,11 +519,14 @@ export default function AppCommunityPage() {
                   Browse all →
                 </Link>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
-                {(filteredBrass.length > 0 ? filteredBrass : BRASS_SCORES).map(s => <ScoreCard key={s.id} score={s} />)}
-              </div>
+              {loadingScores ? (
+                <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+                  {filteredBrass.map(s => <ScoreCard key={s.id} score={s} />)}
+                </div>
+              )}
             </section>
-
           </div>
         </div>
       )}
@@ -467,6 +549,14 @@ export default function AppCommunityPage() {
 
       {/* ── PROFILE ── */}
       {tab === "profile" && <ProfileTab />}
+
+      {/* Upload modal */}
+      {showUpload && (
+        <UploadScoreModal
+          onClose={() => setShowUpload(false)}
+          onSuccess={() => setShowUpload(false)}
+        />
+      )}
     </div>
   );
 }

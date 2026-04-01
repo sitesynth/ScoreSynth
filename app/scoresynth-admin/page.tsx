@@ -6,6 +6,32 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 import type { Score } from "@/lib/supabase/types";
 
+// Generate a JPEG thumbnail from page 1 of a PDF File
+async function generatePdfThumbnail(file: File): Promise<Blob | null> {
+  try {
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      "pdfjs-dist/build/pdf.worker.mjs",
+      import.meta.url
+    ).toString();
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.5 });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d")!;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.88));
+  } catch {
+    return null;
+  }
+}
+
 // ─── admin handle ────────────────────────────────────────────────────────────
 // Change this if you rename the account
 const ADMIN_HANDLE = "mayyascoresynth";
@@ -45,6 +71,8 @@ export default function AdminPage() {
   const [pages, setPages] = useState(1);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [pdfThumbnail, setPdfThumbnail] = useState<Blob | null>(null);
+  const [pdfThumbnailUrl, setPdfThumbnailUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -118,11 +146,13 @@ export default function AdminPage() {
       return;
     }
 
-    // Upload cover image if provided
+    // Upload cover image (explicit or auto-generated from PDF page 1)
     let coverPublicUrl: string | null = null;
-    if (coverFile) {
-      const coverPath = `${user.id}/${ts}-${coverFile.name}`;
-      const { error: coverErr } = await supabase.storage.from("covers").upload(coverPath, coverFile);
+    const coverBlob = coverFile ?? pdfThumbnail;
+    const coverName = coverFile ? coverFile.name : "cover.jpg";
+    if (coverBlob) {
+      const coverPath = `${user.id}/${ts}-${coverName}`;
+      const { error: coverErr } = await supabase.storage.from("covers").upload(coverPath, coverBlob);
       if (!coverErr) {
         const { data: urlData } = supabase.storage.from("covers").getPublicUrl(coverPath);
         coverPublicUrl = urlData.publicUrl;
@@ -185,7 +215,8 @@ export default function AdminPage() {
     setEditingId(null); setEditingPdfUrl(null); setEditingCoverUrl(null);
     setTitle(""); setComposer(""); setPublisher(""); setDescription("");
     setDifficulty("Intermediate"); setCategory("piano"); setInstruments("");
-    setTag("free"); setPriceDisplay(""); setPages(1); setPdfFile(null); setCoverFile(null);
+    setTag("free"); setPriceDisplay(""); setPages(1);
+    setPdfFile(null); setCoverFile(null); setPdfThumbnail(null); setPdfThumbnailUrl(null);
   };
 
   // ─── Update ───────────────────────────────────────────────────────────────
@@ -207,9 +238,11 @@ export default function AdminPage() {
     }
 
     let newCoverUrl = editingCoverUrl;
-    if (coverFile) {
-      const coverPath = `${user.id}/${ts}-${coverFile.name}`;
-      const { error: coverErr } = await supabase.storage.from("covers").upload(coverPath, coverFile);
+    const updateCoverBlob = coverFile ?? (pdfThumbnail && !editingCoverUrl ? pdfThumbnail : null);
+    const updateCoverName = coverFile ? coverFile.name : "cover.jpg";
+    if (updateCoverBlob) {
+      const coverPath = `${user.id}/${ts}-${updateCoverName}`;
+      const { error: coverErr } = await supabase.storage.from("covers").upload(coverPath, updateCoverBlob);
       if (!coverErr) {
         const { data: urlData } = supabase.storage.from("covers").getPublicUrl(coverPath);
         newCoverUrl = urlData.publicUrl;
@@ -441,9 +474,30 @@ export default function AdminPage() {
                     type="file"
                     accept=".pdf"
                     style={{ display: "none" }}
-                    onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
+                    onChange={async e => {
+                      const f = e.target.files?.[0] ?? null;
+                      setPdfFile(f);
+                      setPdfThumbnail(null);
+                      setPdfThumbnailUrl(null);
+                      if (f) {
+                        const thumb = await generatePdfThumbnail(f);
+                        if (thumb) {
+                          setPdfThumbnail(thumb);
+                          setPdfThumbnailUrl(URL.createObjectURL(thumb));
+                        }
+                      }
+                    }}
                   />
                 </label>
+                {/* Show auto-generated PDF thumbnail */}
+                {pdfThumbnailUrl && !coverFile && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pdfThumbnailUrl}
+                    alt="PDF preview"
+                    style={{ marginTop: "8px", width: "100%", borderRadius: "8px", maxHeight: "160px", objectFit: "cover" }}
+                  />
+                )}
               </div>
             </div>
 

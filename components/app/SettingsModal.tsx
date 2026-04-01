@@ -149,10 +149,13 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
             const ext = file.name.split(".").pop();
             const path = `${userId}/avatar.${ext}`;
             const supabase = createClient();
-            const { error: insertErr } = await supabase.storage
-              .from("avatars").upload(path, file, { upsert: false });
-            if (insertErr) {
-              await supabase.storage.from("avatars").update(path, file);
+            const { error } = await supabase.storage
+              .from("avatars").upload(path, file, { upsert: true });
+            if (error) {
+              alert("Upload failed: " + error.message);
+              setUploading(false);
+              e.target.value = "";
+              return;
             }
             const { data } = supabase.storage.from("avatars").getPublicUrl(path);
             const url = `${data.publicUrl}?t=${Date.now()}`;
@@ -160,7 +163,6 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
             setAvatarUrl(url);
             onAvatarChange?.(url);
             setUploading(false);
-            // Reset input so the same file can be re-selected
             e.target.value = "";
           }}
         />

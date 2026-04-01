@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type Tab = "account" | "community" | "notifications" | "security";
 type User = { name: string; email: string; handle: string; initials: string; createdAt: string };
@@ -54,14 +55,18 @@ const inputStyle: React.CSSProperties = {
 const labelStyle: React.CSSProperties = { fontSize: "11px", color: "#6b5452", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" };
 const actionBtnStyle: React.CSSProperties = { fontSize: "12px", color: "#6b8fbd", background: "none", border: "none", cursor: "pointer", padding: 0 };
 
-export default function SettingsModal({ activeTab, onTabChange, onClose, user }: {
+export default function SettingsModal({ activeTab, onTabChange, onClose, user, userId, currentAvatarUrl, onAvatarChange }: {
   activeTab: Tab;
   onTabChange: (t: Tab) => void;
   onClose: () => void;
   user: User;
+  userId: string;
+  currentAvatarUrl?: string | null;
+  onAvatarChange?: (url: string) => void;
 }) {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(currentAvatarUrl ?? null);
   const [avatarHover, setAvatarHover] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [changingName, setChangingName] = useState(false);
   const [newName, setNewName] = useState("");
@@ -144,9 +149,25 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user }:
                   type="file"
                   accept="image/*"
                   style={{ display: "none" }}
-                  onChange={e => {
+                  onChange={async e => {
                     const file = e.target.files?.[0];
-                    if (file) setAvatarUrl(URL.createObjectURL(file));
+                    if (!file || !userId) return;
+                    setUploading(true);
+                    const ext = file.name.split(".").pop();
+                    const path = `${userId}/avatar.${ext}`;
+                    const supabase = createClient();
+                    // Try insert first, then update if file already exists
+                    const { error: insertErr } = await supabase.storage
+                      .from("avatars").upload(path, file, { upsert: false });
+                    if (insertErr) {
+                      await supabase.storage.from("avatars").update(path, file);
+                    }
+                    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+                    const url = `${data.publicUrl}?t=${Date.now()}`;
+                    await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", userId);
+                    setAvatarUrl(url);
+                    onAvatarChange?.(url);
+                    setUploading(false);
                   }}
                 />
                 <div
@@ -168,20 +189,26 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user }:
                     ? <img src={avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : user.initials
                   }
-                  {/* Hover overlay */}
-                  {avatarHover && (
+                  {/* Hover / uploading overlay */}
+                  {(avatarHover || uploading) && (
                     <div style={{
                       position: "absolute", inset: 0,
                       background: "rgba(0,0,0,0.5)",
                       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                       gap: "4px",
                     }}>
-                      <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="1.8" viewBox="0 0 24 24">
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
-                      </svg>
-                      <span style={{ fontSize: "9px", color: "#fff", fontWeight: 500, lineHeight: 1 }}>Upload</span>
+                      {uploading ? (
+                        <span style={{ fontSize: "9px", color: "#fff", fontWeight: 500 }}>Saving…</span>
+                      ) : (
+                        <>
+                          <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="1.8" viewBox="0 0 24 24">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                          </svg>
+                          <span style={{ fontSize: "9px", color: "#fff", fontWeight: 500, lineHeight: 1 }}>Upload</span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -234,17 +261,21 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user }:
             <div style={{ display: "flex", gap: "36px", padding: "32px 28px" }}>
               {/* Left: avatar */}
               <div style={{ flexShrink: 0, textAlign: "center" }}>
-                <div style={{
-                  width: "80px", height: "80px", borderRadius: "50%", background: "#c0392b",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "30px", fontWeight: 600, color: "#fff", margin: "0 auto 8px",
-                  overflow: "hidden",
-                }}>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: "80px", height: "80px", borderRadius: "50%", background: "#c0392b",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "30px", fontWeight: 600, color: "#fff", margin: "0 auto 8px",
+                    overflow: "hidden", cursor: "pointer",
+                  }}>
                   {avatarUrl
                     ? <img src={avatarUrl} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     : user.initials}
                 </div>
-                <button style={actionBtnStyle}>Edit</button>
+                <button onClick={() => fileInputRef.current?.click()} style={actionBtnStyle}>
+                  {uploading ? "Saving…" : "Edit"}
+                </button>
               </div>
 
               {/* Right: sections */}

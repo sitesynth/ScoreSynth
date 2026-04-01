@@ -232,6 +232,20 @@ create policy "avatars_upload" on storage.objects
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+-- avatars: authenticated users update their own avatar
+create policy "avatars_update" on storage.objects
+  for update using (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- avatars: authenticated users delete their own avatar
+create policy "avatars_delete" on storage.objects
+  for delete using (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
 -- ═══════════════════════════════════════════════════════════════
 -- ONE-TIME SETUP: Create MayyaScoreSynth admin profile
 -- ─────────────────────────────────────────────────────────────

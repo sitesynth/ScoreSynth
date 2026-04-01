@@ -451,6 +451,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           onTabChange={setSettingsTab}
           onClose={() => setSettingsOpen(false)}
           user={{ name: displayName, email: user?.email ?? "", handle, initials, createdAt: profile?.created_at ?? "" }}
+          userId={user?.id ?? ""}
+          currentAvatarUrl={avatarUrl}
+          onAvatarChange={(url) => setProfile(p => p ? { ...p, avatar_url: url } : p)}
         />
       )}
       {adminOpen && (

@@ -105,9 +105,25 @@ function ProfileTab() {
     const ext = file.name.split(".").pop();
     const path = `${user.id}/avatar.${ext}`;
     const supabase = createClient();
-    await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+
+    // Try insert first; if it already exists, use update
+    let uploadError = null;
+    const { error: insertError } = await supabase.storage
+      .from("avatars").upload(path, file, { upsert: false });
+    if (insertError) {
+      const { error: updateError } = await supabase.storage
+        .from("avatars").update(path, file);
+      uploadError = updateError;
+    }
+    if (uploadError) {
+      console.error("Avatar upload failed:", uploadError.message);
+      return;
+    }
+
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    setAvatarUrl(data.publicUrl);
+    // Add cache-buster so the browser reloads the new image
+    const urlWithBust = `${data.publicUrl}?t=${Date.now()}`;
+    setAvatarUrl(urlWithBust);
     await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id);
   };
 

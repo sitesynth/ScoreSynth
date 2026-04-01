@@ -136,6 +136,35 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
           </button>
         </div>
 
+        {/* Hidden file input — always mounted so fileInputRef works on any tab */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={async e => {
+            const file = e.target.files?.[0];
+            if (!file || !userId) return;
+            setUploading(true);
+            const ext = file.name.split(".").pop();
+            const path = `${userId}/avatar.${ext}`;
+            const supabase = createClient();
+            const { error: insertErr } = await supabase.storage
+              .from("avatars").upload(path, file, { upsert: false });
+            if (insertErr) {
+              await supabase.storage.from("avatars").update(path, file);
+            }
+            const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+            const url = `${data.publicUrl}?t=${Date.now()}`;
+            await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", userId);
+            setAvatarUrl(url);
+            onAvatarChange?.(url);
+            setUploading(false);
+            // Reset input so the same file can be re-selected
+            e.target.value = "";
+          }}
+        />
+
         {/* Content */}
         <div style={{ overflowY: "auto", flex: 1 }}>
 
@@ -144,32 +173,6 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
             <div style={{ display: "flex", gap: "40px", padding: "32px 28px" }}>
               {/* Avatar */}
               <div style={{ flexShrink: 0, textAlign: "center" }}>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={async e => {
-                    const file = e.target.files?.[0];
-                    if (!file || !userId) return;
-                    setUploading(true);
-                    const ext = file.name.split(".").pop();
-                    const path = `${userId}/avatar.${ext}`;
-                    const supabase = createClient();
-                    // Try insert first, then update if file already exists
-                    const { error: insertErr } = await supabase.storage
-                      .from("avatars").upload(path, file, { upsert: false });
-                    if (insertErr) {
-                      await supabase.storage.from("avatars").update(path, file);
-                    }
-                    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-                    const url = `${data.publicUrl}?t=${Date.now()}`;
-                    await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", userId);
-                    setAvatarUrl(url);
-                    onAvatarChange?.(url);
-                    setUploading(false);
-                  }}
-                />
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   onMouseEnter={() => setAvatarHover(true)}

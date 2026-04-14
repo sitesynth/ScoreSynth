@@ -20,11 +20,13 @@ export async function GET(request: Request) {
 
         if (profile?.handle) {
           return NextResponse.redirect(`${origin}/community/user/${profile.handle}`);
+        } else {
+          // New user — go to onboarding
+          return NextResponse.redirect(`${origin}/onboarding`);
         }
       }
     }
   }
 
-  // Fallback: go to community page
   return NextResponse.redirect(`${origin}/community`);
 }

@@ -18,27 +18,45 @@ export default function OnboardingPage() {
   const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push("/"); return; }
       setUserId(user.id);
 
-      // Pre-fill display name from Google metadata
-      const meta = user.user_metadata;
-      if (meta?.full_name) setDisplayName(meta.full_name);
-      if (meta?.name) setDisplayName(meta.name);
+      // Check if already has profile
+      const { data: existingProfile } = await supabase
+        .from("profiles").select("handle").eq("id", user.id).single();
+      if (existingProfile?.handle) {
+        router.push(`/community/user/${existingProfile.handle}`);
+        return;
+      }
 
-      // Generate a suggested handle from email
+      const meta = user.user_metadata;
+
+      // If signup metadata has handle — auto-create profile, no form needed
+      if (meta?.handle) {
+        const { error } = await supabase.from("profiles").upsert({
+          id: user.id,
+          handle: meta.handle,
+          display_name: meta.display_name || meta.handle,
+          bio: "",
+          avatar_url: meta.avatar_url || meta.picture || null,
+          banner_url: null,
+        });
+        if (!error) {
+          router.push(`/community/user/${meta.handle}`);
+          return;
+        }
+      }
+
+      // Google / fallback — pre-fill form
+      if (meta?.full_name) setDisplayName(meta.full_name);
+      else if (meta?.name) setDisplayName(meta.name);
+
       const emailHandle = user.email?.split("@")[0]
         ?.replace(/[^a-z0-9_]/gi, "")
         ?.toLowerCase()
         ?.slice(0, 20) ?? "";
       if (emailHandle) { setHandle(emailHandle); setPrefilled(true); }
-
-      // Check if already has profile
-      supabase.from("profiles").select("handle").eq("id", user.id).single()
-        .then(({ data }) => {
-          if (data?.handle) router.push(`/community/user/${data.handle}`);
-        });
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

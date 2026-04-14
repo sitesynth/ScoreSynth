@@ -129,7 +129,13 @@ export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Pr
     const { data, error: authErr } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          handle: handle.toLowerCase(),
+          display_name: displayName.trim(),
+        },
+      },
     });
 
     if (authErr) { setError(authErr.message); setLoading(false); return; }

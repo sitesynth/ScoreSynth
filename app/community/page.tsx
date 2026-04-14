@@ -267,7 +267,7 @@ export default function CommunityPage() {
                       <p style={{ fontFamily: "Georgia, serif", fontSize: "15px", color: "#fff", marginBottom: "4px" }}>{cat.name}</p>
                       <p style={{ fontSize: "11px", color: "#7a6360", lineHeight: 1.5 }}>{cat.desc}</p>
                     </div>
-                    <div style={{ width: "90px", minWidth: "90px", alignSelf: "stretch", position: "relative", flexShrink: 0, background: cat.gradient ?? "transparent" }}>
+                    <div style={{ width: "90px", minWidth: "90px", alignSelf: "stretch", position: "relative", flexShrink: 0, background: "transparent" }}>
                       {cat.image && <Image src={cat.image} alt={cat.name} fill style={{ objectFit: "cover", objectPosition: "center" }} />}
                     </div>
                   </div>

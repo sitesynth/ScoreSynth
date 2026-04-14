@@ -446,7 +446,7 @@ export default function AppCommunityPage() {
         supabase.from("collections")
           .select("id, name").eq("user_id", user!.id).order("created_at"),
       ]);
-      const rows = (savedRes.data ?? []) as { collection_id: string | null; scores: Score }[];
+      const rows = (savedRes.data ?? []) as unknown as { collection_id: string | null; scores: Score }[];
       const scores = rows.map(r => r.scores).filter(Boolean);
       const collIds = rows.map(r => r.collection_id);
       setSavedScores(scores);

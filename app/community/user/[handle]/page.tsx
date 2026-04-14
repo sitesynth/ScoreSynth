@@ -288,7 +288,7 @@ export default function PublicUserProfilePage() {
 
       setUserScores((scoresRes.data as Score[]) ?? []);
 
-      const savedRows = (savedRes.data ?? []) as { collection_id: string | null; scores: Score }[];
+      const savedRows = (savedRes.data ?? []) as unknown as { collection_id: string | null; scores: Score }[];
       const scores = savedRows.map(r => r.scores).filter(Boolean);
       const collIds = savedRows.map(r => r.collection_id);
       setSavedScores(scores);

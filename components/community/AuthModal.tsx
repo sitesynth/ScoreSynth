@@ -11,6 +11,62 @@ type Props = {
   onSuccess?: () => void;
 };
 
+// Password rules (ГОСТ Р 57580 / best practices)
+const PASSWORD_RULES = [
+  { id: "len",     label: "At least 8 characters",          test: (p: string) => p.length >= 8 },
+  { id: "upper",   label: "At least one uppercase letter",  test: (p: string) => /[A-Z]/.test(p) },
+  { id: "lower",   label: "At least one lowercase letter",  test: (p: string) => /[a-z]/.test(p) },
+  { id: "digit",   label: "At least one number",            test: (p: string) => /[0-9]/.test(p) },
+  { id: "special", label: "At least one special character (!@#$%^&*…)", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+];
+
+function passwordStrength(p: string): { score: number; color: string; label: string } {
+  const passed = PASSWORD_RULES.filter(r => r.test(p)).length;
+  if (passed <= 2) return { score: passed, color: "#c0392b", label: "Weak" };
+  if (passed === 3) return { score: passed, color: "#e67e22", label: "Fair" };
+  if (passed === 4) return { score: passed, color: "#f1c40f", label: "Good" };
+  return { score: passed, color: "#27ae60", label: "Strong" };
+}
+
+function PasswordRules({ password }: { password: string }) {
+  if (!password) return null;
+  const strength = passwordStrength(password);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      {/* Strength bar */}
+      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+        {[1,2,3,4,5].map(i => (
+          <div key={i} style={{
+            flex: 1, height: "3px", borderRadius: "2px",
+            background: i <= strength.score ? strength.color : "rgba(255,255,255,0.1)",
+            transition: "background 0.2s",
+          }} />
+        ))}
+        <span style={{ fontSize: "11px", color: strength.color, marginLeft: "6px", minWidth: "40px" }}>
+          {strength.label}
+        </span>
+      </div>
+      {/* Rules checklist */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+        {PASSWORD_RULES.map(rule => {
+          const ok = rule.test(password);
+          return (
+            <div key={rule.id} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                {ok
+                  ? <><circle cx="6" cy="6" r="6" fill="#27ae60"/><path d="M3.5 6l2 2 3-3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></>
+                  : <circle cx="6" cy="6" r="5.5" stroke="rgba(255,255,255,0.2)"/>
+                }
+              </svg>
+              <span style={{ fontSize: "11px", color: ok ? "#a8c8a8" : "#6b5452" }}>{rule.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
     <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -63,7 +119,8 @@ export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Pr
     if (!handle) { setError("Please choose a username."); return; }
     if (handleError) { setError(handleError); return; }
     if (!email) { setError("Please enter your email."); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    const failedRules = PASSWORD_RULES.filter(r => !r.test(password));
+    if (failedRules.length > 0) { setError("Please meet all password requirements."); return; }
     if (password !== confirmPassword) { setError("Passwords don't match."); return; }
 
     setLoading(true);
@@ -296,6 +353,9 @@ export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Pr
                 <EyeIcon open={showPassword} />
               </button>
             </div>
+
+            {/* Password rules (signup only) */}
+            {mode === "signup" && password && <PasswordRules password={password} />}
 
             {/* Confirm password (signup only) */}
             {mode === "signup" && (

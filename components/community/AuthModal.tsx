@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
-  intent: "download" | "purchase" | "comment" | "follow";
+  intent: "download" | "purchase" | "comment" | "follow" | "upload";
   scoreTitle?: string;
   onClose: () => void;
   onSuccess?: () => void;
@@ -19,17 +20,45 @@ export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Pr
   const [done, setDone] = useState(false);
 
   const supabase = createClient();
+  const router = useRouter();
 
   const handleEmailAuth = async () => {
     if (!email || !password) { setError("Please enter your email and password."); return; }
     setLoading(true);
     setError(null);
-    const { error: authError } = mode === "signup"
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password });
+
+    if (mode === "signup") {
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+      setLoading(false);
+      if (authError) { setError(authError.message); return; }
+      setDone(true);
+      return;
+    }
+
+    // Sign in
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (authError) { setError(authError.message); return; }
-    if (mode === "signup") { setDone(true); return; }
+
+    // Redirect to the user's community profile
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("handle")
+        .eq("id", data.user.id)
+        .single();
+      if (profile?.handle) {
+        onSuccess?.();
+        onClose();
+        router.push(`/community/user/${profile.handle}`);
+        return;
+      }
+    }
+
     onSuccess?.();
     onClose();
   };
@@ -37,22 +66,24 @@ export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Pr
   const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.href },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
   };
 
   const intentTitle = {
     download: "Sign in to download",
     purchase: "Sign in to purchase",
-    comment: "Sign in to comment",
-    follow: "Sign in to follow",
+    comment:  "Sign in to comment",
+    follow:   "Sign in to follow",
+    upload:   "Sign in to upload",
   }[intent];
 
   const intentDesc = {
     download: <>Create a free account or sign in to download <em style={{ color: "#e8dbd8" }}>{scoreTitle}</em>.</>,
     purchase: <>Create a free account or sign in to purchase <em style={{ color: "#e8dbd8" }}>{scoreTitle}</em>.</>,
-    comment: "Create a free account or sign in to leave a comment.",
-    follow: "Create a free account or sign in to follow this user.",
+    comment:  "Create a free account or sign in to leave a comment.",
+    follow:   "Create a free account or sign in to follow this user.",
+    upload:   "Create a free account or sign in to upload your scores.",
   }[intent];
 
   return (

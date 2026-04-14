@@ -10,20 +10,37 @@ import { createClient } from "@/lib/supabase/client";
 import type { Score } from "@/lib/supabase/types";
 
 const CATEGORY_META: Record<string, { name: string; desc: string; image: string }> = {
-  piano:     { name: "Piano",     desc: "Solo works, concertos, and accompaniment scores",          image: "/categories/detail/piano.webp" },
-  strings:   { name: "Strings",   desc: "Violin, cello, viola, and ensemble arrangements",          image: "/categories/detail/strings.webp" },
-  brass:     { name: "Brass",     desc: "Trumpet, trombones, horn, and brass ensemble scores",      image: "/categories/detail/brass.webp" },
-  symphonic: { name: "Symphonic", desc: "Full orchestra works and grand ensemble pieces",           image: "/categories/detail/Symphomic.webp" },
-  guitar:    { name: "Guitar",    desc: "Classical, acoustic, and fingerstyle guitar scores",       image: "/categories/detail/guitar.webp" },
-  choir:     { name: "Choir",     desc: "Vocal ensembles, a cappella and choral arrangements",      image: "/categories/detail/choir.webp" },
+  piano:      { name: "Piano & Keyboard",      desc: "Solo piano, organ, harpsichord, and accompaniment scores.",     image: "/categories/detail/piano.webp" },
+  strings:    { name: "Strings",               desc: "Violin, viola, cello, double bass, and string ensembles.",      image: "/categories/detail/strings.webp" },
+  woodwinds:  { name: "Woodwinds",             desc: "Flute, clarinet, oboe, saxophone, and bassoon repertoire.",     image: "/categories/detail/strings.webp" },
+  brass:      { name: "Brass",                 desc: "Trumpet, trombone, french horn, tuba, and brass ensembles.",    image: "/categories/detail/brass.webp" },
+  chamber:    { name: "Chamber Music",         desc: "Duos, trios, quartets, and small instrumental groups.",         image: "/categories/detail/strings.webp" },
+  symphonic:  { name: "Symphonic & Orchestral",desc: "Full scores and parts for chamber and symphony orchestras.",    image: "/categories/detail/Symphomic.webp" },
+  guitar:     { name: "Guitar & Fretted",      desc: "Classical guitar, acoustic, electric, and ukulele.",            image: "/categories/detail/guitar.webp" },
+  choir:      { name: "Vocal & Choir",         desc: "Solo voice, art songs, opera, and choral arrangements.",        image: "/categories/detail/choir.webp" },
+  percussion: { name: "Percussion",            desc: "Drums, mallets, timpani, and percussion ensembles.",            image: "/categories/detail/brass.webp" },
+  soundtracks:{ name: "Soundtracks",           desc: "Music from movies, TV series, and video games.",                image: "/categories/detail/Symphomic.webp" },
 };
+
+const ALL_CATEGORIES = [
+  { slug: "piano",       name: "Piano & Keyboard" },
+  { slug: "strings",     name: "Strings" },
+  { slug: "woodwinds",   name: "Woodwinds" },
+  { slug: "brass",       name: "Brass" },
+  { slug: "chamber",     name: "Chamber" },
+  { slug: "symphonic",   name: "Symphonic" },
+  { slug: "guitar",      name: "Guitar" },
+  { slug: "choir",       name: "Vocal & Choir" },
+  { slug: "percussion",  name: "Percussion" },
+  { slug: "soundtracks", name: "Soundtracks" },
+];
 
 function ScoreCard({ score }: { score: Score }) {
   const [hovered, setHovered] = useState(false);
   const handle = score.profiles?.handle ?? "";
 
   return (
-    <Link href={`/community/${score.id}`} style={{ textDecoration: "none" }}>
+    <Link href={`/community/${score.id}`} style={{ textDecoration: "none", minWidth: 0, display: "block" }}>
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -38,8 +55,8 @@ function ScoreCard({ score }: { score: Score }) {
           display: "flex", flexDirection: "column",
         }}
       >
-        <div style={{ background: "#f5f0eb", aspectRatio: "4/3", position: "relative", overflow: "hidden", flexShrink: 0 }}>
-          <Image src="/scoreimagedefaultpreview.png" alt={score.title} fill style={{ objectFit: "cover" }} />
+        <div style={{ background: "#f5f0eb", position: "relative", paddingBottom: "75%", overflow: "hidden", flexShrink: 0 }}>
+          <Image src="/scoreimagedefaultpreview.png" alt={score.title} fill style={{ objectFit: "contain" }} />
           {hovered && (
             <div style={{ position: "absolute", inset: 0, background: "rgba(33,24,23,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <span style={{ fontSize: "13px", fontWeight: 500, color: "#fff", padding: "8px 18px", borderRadius: "20px", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.2)" }}>View score</span>
@@ -143,6 +160,35 @@ export default function CategoryPage() {
               {meta.name}
             </h1>
             <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.65)" }}>{meta.desc}</p>
+          </div>
+        </div>
+
+        {/* Category nav */}
+        <div style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", background: "#1a1210" }}>
+          <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 32px" }}>
+            <div style={{ display: "flex", gap: "4px", overflowX: "auto", scrollbarWidth: "none" }}>
+              {ALL_CATEGORIES.map(cat => (
+                <Link
+                  key={cat.slug}
+                  href={`/community/category/${cat.slug}`}
+                  style={{
+                    padding: "14px 16px",
+                    fontSize: "13px",
+                    fontWeight: cat.slug === slug ? 500 : 400,
+                    color: cat.slug === slug ? "#fff" : "#6b5452",
+                    textDecoration: "none",
+                    borderBottom: cat.slug === slug ? "2px solid #c0392b" : "2px solid transparent",
+                    whiteSpace: "nowrap",
+                    transition: "color 0.15s",
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { if (cat.slug !== slug) e.currentTarget.style.color = "#a89690"; }}
+                  onMouseLeave={e => { if (cat.slug !== slug) e.currentTarget.style.color = "#6b5452"; }}
+                >
+                  {cat.name}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 

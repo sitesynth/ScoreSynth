@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { createClient } from "@/lib/supabase/client";
@@ -12,9 +13,13 @@ import { SCORE_TAGS } from "@/lib/scores";
 function ScoreCard({ score }: { score: Score }) {
   const [hovered, setHovered] = useState(false);
   const handle = score.profiles?.handle ?? "";
+  const router = useRouter();
 
   return (
-    <Link href={`/community/${score.id}`} style={{ textDecoration: "none" }}>
+    <div
+      onClick={() => router.push(`/community/${score.id}`)}
+      style={{ textDecoration: "none", display: "block", minWidth: 0 }}
+    >
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -30,12 +35,12 @@ function ScoreCard({ score }: { score: Score }) {
         }}
       >
         {/* Cover image or placeholder */}
-        <div style={{ aspectRatio: "4/3", position: "relative", overflow: "hidden", flexShrink: 0 }}>
+        <div style={{ position: "relative", paddingBottom: "75%", overflow: "hidden", flexShrink: 0, background: "#f5f0eb" }}>
           {score.cover_url ? (
-            <Image src={score.cover_url} alt={score.title} fill style={{ objectFit: "cover" }} />
+            <Image src={score.cover_url} alt={score.title} fill style={{ objectFit: "contain" }} />
           ) : (
             <div style={{
-              width: "100%", height: "100%",
+              position: "absolute", inset: 0,
               background: "linear-gradient(135deg, #2a1f1e 0%, #1a1210 100%)",
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px",
             }}>
@@ -66,23 +71,38 @@ function ScoreCard({ score }: { score: Score }) {
         </div>
 
         {/* Info */}
-        <div style={{ padding: "12px 14px 14px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ padding: "10px 14px 12px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
           <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {score.title}
           </p>
+          <p style={{ fontSize: "11px", color: "#6b5452", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {score.composer || "—"}
+          </p>
 
-          <Link
-            href={`/community/user/${handle}`}
-            onClick={e => e.stopPropagation()}
-            style={{ fontSize: "11px", color: "#6b5452", textDecoration: "none", transition: "color 0.15s" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#a89690")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#6b5452")}
-          >
-            @{handle}
-          </Link>
+          {score.instruments && (score.instruments as string[]).length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "5px" }}>
+              {(score.instruments as string[]).slice(0, 3).map(inst => (
+                <span
+                  key={inst}
+                  onClick={e => { e.stopPropagation(); router.push(`/community?q=${encodeURIComponent(inst)}`); }}
+                  style={{
+                    fontSize: "10px", padding: "2px 7px", borderRadius: "20px",
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    color: "#a89690", cursor: "pointer", whiteSpace: "nowrap",
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#e8dbd8"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#a89690"; }}
+                >
+                  {inst}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Bottom row */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "7px" }}>
             <div style={{ display: "flex", gap: "12px" }}>
               <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
                 <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">
@@ -108,7 +128,7 @@ function ScoreCard({ score }: { score: Score }) {
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -125,7 +145,7 @@ export default function CommunityPage() {
     async function fetchScores() {
       const { data } = await supabase
         .from("scores")
-        .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
+        .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
         .order("likes_count", { ascending: false });
 
       if (data) {
@@ -226,14 +246,14 @@ export default function CommunityPage() {
             </div>
             <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
               {[
-                { name: "Piano", desc: "Solo works, concertos, and accompaniment scores", image: "/categories/piano.png" },
-                { name: "Strings", desc: "Violin, cello, viola, and ensemble arrangements", image: "/categories/strings-v2.png" },
-                { name: "Brass", desc: "Trumpet, trombones, horn, and brass ensemble scores", image: "/categories/brass.png" },
-                { name: "Symphonic", desc: "Full orchestra works and grand ensemble pieces", image: "/categories/Symphomic.png" },
-                { name: "Guitar", desc: "Classical, acoustic, and fingerstyle guitar scores", image: "/categories/guitar.png" },
-                { name: "Choir", desc: "Vocal ensembles, a cappella and choral arrangements", image: "/categories/choir.png" },
+                { name: "Piano & Keyboard", slug: "piano", desc: "Solo piano, organ, harpsichord, and accompaniment scores.", image: "/categories/piano.png" },
+                { name: "Strings", slug: "strings", desc: "Violin, viola, cello, double bass, and string ensembles.", image: "/categories/strings-v2.png" },
+                { name: "Brass", slug: "brass", desc: "Trumpet, trombone, french horn, tuba, and brass ensembles.", image: "/categories/brass.png" },
+                { name: "Symphonic & Orchestral", slug: "symphonic", desc: "Full scores and parts for chamber and symphony orchestras.", image: "/categories/Symphomic.png" },
+                { name: "Guitar & Fretted", slug: "guitar", desc: "Classical guitar, acoustic, electric, and ukulele.", image: "/categories/guitar.png" },
+                { name: "Vocal & Choir", slug: "choir", desc: "Solo voice, art songs, opera, and choral arrangements.", image: "/categories/choir.png" },
               ].map(cat => (
-                <Link key={cat.name} href={`/community/category/${cat.name.toLowerCase()}`} style={{ textDecoration: "none" }}>
+                <Link key={cat.slug} href={`/community/category/${cat.slug}`} style={{ textDecoration: "none" }}>
                   <div style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)",
@@ -243,12 +263,12 @@ export default function CommunityPage() {
                     onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.18)")}
                     onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)")}
                   >
-                    <div style={{ padding: "16px 18px", flex: 1 }}>
-                      <p style={{ fontFamily: "Georgia, serif", fontSize: "16px", color: "#fff", marginBottom: "4px" }}>{cat.name}</p>
-                      <p style={{ fontSize: "12px", color: "#7a6360", lineHeight: 1.5 }}>{cat.desc}</p>
+                    <div style={{ padding: "16px 18px", flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: "Georgia, serif", fontSize: "15px", color: "#fff", marginBottom: "4px" }}>{cat.name}</p>
+                      <p style={{ fontSize: "11px", color: "#7a6360", lineHeight: 1.5 }}>{cat.desc}</p>
                     </div>
-                    <div style={{ width: "110px", minWidth: "110px", alignSelf: "stretch", position: "relative", flexShrink: 0 }}>
-                      <Image src={cat.image} alt={cat.name} fill style={{ objectFit: "cover", objectPosition: "center" }} />
+                    <div style={{ width: "90px", minWidth: "90px", alignSelf: "stretch", position: "relative", flexShrink: 0, background: cat.gradient ?? "transparent" }}>
+                      {cat.image && <Image src={cat.image} alt={cat.name} fill style={{ objectFit: "cover", objectPosition: "center" }} />}
                     </div>
                   </div>
                 </Link>

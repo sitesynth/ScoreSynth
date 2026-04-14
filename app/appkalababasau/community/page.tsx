@@ -222,21 +222,6 @@ function ProfileTab() {
               ))}
             </div>
 
-            <div style={{
-              display: "flex", alignItems: "flex-start", gap: "8px",
-              background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: "8px", padding: "10px 12px",
-            }}>
-              <svg width="13" height="13" fill="none" stroke="#6b5452" strokeWidth="1.8" viewBox="0 0 24 24" style={{ marginTop: "1px", flexShrink: 0 }}>
-                <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/>
-              </svg>
-              <div>
-                <p style={{ fontSize: "11px", color: "#6b5452", marginBottom: "2px" }}>Your profile is visible to the public at</p>
-                <Link href={`/community/user/${handle}`} style={{ fontSize: "11px", color: "#6b8fbd", textDecoration: "none" }}>
-                  scoresynth.com/community/user/{handle}
-                </Link>
-              </div>
-            </div>
           </div>
 
           {/* Right: tabs + content */}
@@ -313,6 +298,47 @@ const CATEGORY_CARDS = [
   { name: "Choir", desc: "Vocal ensembles, a cappella and choral arrangements", image: "/categories/choir.png" },
 ];
 
+// ─── Collection card (Pinterest style) ──────────────────────────────────────
+type Collection = { id: string; name: string; count: number; covers: (string | null)[] };
+
+function CollectionCard({ coll, onClick }: { coll: Collection; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  const covers = [...coll.covers.slice(0, 4)];
+  while (covers.length < 4) covers.push(null);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{
+        borderRadius: "12px", overflow: "hidden", background: "#1e1513",
+        border: `1px solid ${hovered ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)"}`,
+        transform: hovered ? "translateY(-2px)" : "translateY(0)",
+        boxShadow: hovered ? "0 6px 24px rgba(0,0,0,0.4)" : "none",
+        transition: "all 0.2s ease", cursor: "pointer",
+      }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", aspectRatio: "1/1" }}>
+        {covers.map((src, i) => (
+          <div key={i} style={{ position: "relative", overflow: "hidden", background: "#1a1210" }}>
+            {src
+              ? <Image src={src} alt="" fill style={{ objectFit: "cover" }} />
+              : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" viewBox="0 0 24 24">
+                    <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+                  </svg>
+                </div>
+            }
+          </div>
+        ))}
+      </div>
+      <div style={{ padding: "10px 12px" }}>
+        <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", marginBottom: "2px" }}>{coll.name}</p>
+        <p style={{ fontSize: "11px", color: "#6b5452" }}>{coll.count} {coll.count === 1 ? "score" : "scores"}</p>
+      </div>
+    </div>
+  );
+}
+
 function ScoreCard({ score }: { score: Score }) {
   const [hovered, setHovered] = useState(false);
   const handle = score.profiles?.handle ?? "";
@@ -380,6 +406,17 @@ export default function AppCommunityPage() {
   const [loadingScores, setLoadingScores] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
 
+  // Saved tab state
+  const { user } = useAuth();
+  const [savedScores, setSavedScores] = useState<Score[]>([]);
+  const [savedCollectionIds, setSavedCollectionIds] = useState<(string | null)[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [activeCollection, setActiveCollection] = useState<string | "all" | null>(null);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [savedLoaded, setSavedLoaded] = useState(false);
+  const [newCollName, setNewCollName] = useState("");
+  const [addingColl, setAddingColl] = useState(false);
+
   useEffect(() => {
     const supabase = createClient();
     supabase
@@ -395,6 +432,48 @@ export default function AppCommunityPage() {
         setLoadingScores(false);
       });
   }, [showUpload]); // re-fetch after upload
+
+  // Load saved scores + collections when tab becomes active
+  useEffect(() => {
+    if (tab !== "saved" || savedLoaded || !user) return;
+    setLoadingSaved(true);
+    const supabase = createClient();
+    async function loadSaved() {
+      const [savedRes, collRes] = await Promise.all([
+        supabase.from("saved_scores")
+          .select("collection_id, scores(id, title, composer, tag, price_display, likes_count, views_count, category, cover_url, author_id, pdf_url, midi_url, instruments, pages, publisher, description, difficulty, created_at, updated_at)")
+          .eq("user_id", user!.id).order("saved_at", { ascending: false }),
+        supabase.from("collections")
+          .select("id, name").eq("user_id", user!.id).order("created_at"),
+      ]);
+      const rows = (savedRes.data ?? []) as { collection_id: string | null; scores: Score }[];
+      const scores = rows.map(r => r.scores).filter(Boolean);
+      const collIds = rows.map(r => r.collection_id);
+      setSavedScores(scores);
+      setSavedCollectionIds(collIds);
+      const rawColls = (collRes.data ?? []) as { id: string; name: string }[];
+      const colls: Collection[] = rawColls.map(c => {
+        const idxs = collIds.map((cid, i) => cid === c.id ? i : -1).filter(i => i >= 0);
+        return { id: c.id, name: c.name, count: idxs.length, covers: idxs.slice(0, 4).map(i => scores[i]?.cover_url ?? null) };
+      });
+      setCollections(colls);
+      setLoadingSaved(false);
+      setSavedLoaded(true);
+    }
+    loadSaved();
+  }, [tab, savedLoaded, user]);
+
+  const handleCreateCollection = async () => {
+    if (!newCollName.trim() || !user) return;
+    setAddingColl(true);
+    const supabase = createClient();
+    const { data } = await supabase.from("collections")
+      .insert({ user_id: user.id, name: newCollName.trim() })
+      .select("id, name").single();
+    if (data) setCollections(prev => [...prev, { id: data.id, name: data.name, count: 0, covers: [] }]);
+    setNewCollName("");
+    setAddingColl(false);
+  };
 
   const filterScores = (scores: Score[]) => {
     if (!query) return scores;
@@ -539,17 +618,108 @@ export default function AppCommunityPage() {
 
       {/* ── SAVED ── */}
       {tab === "saved" && (
-        <div style={{ padding: "36px 28px", textAlign: "center", paddingTop: "80px" }}>
-          <svg width="48" height="48" fill="none" stroke="#3d2a28" strokeWidth="1.2" viewBox="0 0 24 24" style={{ margin: "0 auto 14px", display: "block" }}>
-            <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
-          </svg>
-          <p style={{ fontSize: "14px", color: "#6b5452", marginBottom: "6px" }}>No saved scores yet.</p>
-          <p style={{ fontSize: "12px", color: "#3d2a28" }}>Browse the community and save scores you like.</p>
-          <button onClick={() => setTab("browse")} style={{
-            marginTop: "16px", padding: "8px 20px", borderRadius: "8px",
-            background: "#c0392b", border: "none", color: "#fff",
-            fontSize: "13px", fontWeight: 500, cursor: "pointer",
-          }}>Browse scores</button>
+        <div style={{ padding: "28px 28px 48px" }}>
+          {loadingSaved ? (
+            <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
+          ) : (
+            <>
+              {/* Sub-nav when inside a collection */}
+              {activeCollection !== null && (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                  <button onClick={() => setActiveCollection(null)}
+                    style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
+                    Collections
+                  </button>
+                  <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
+                  <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
+                    {activeCollection === "all" ? "All saved" : collections.find(c => c.id === activeCollection)?.name}
+                  </span>
+                </div>
+              )}
+
+              {/* Collection overview grid */}
+              {activeCollection === null && (
+                <>
+                  {savedScores.length === 0 ? (
+                    <div style={{ textAlign: "center", paddingTop: "48px" }}>
+                      <svg width="48" height="48" fill="none" stroke="#3d2a28" strokeWidth="1.2" viewBox="0 0 24 24" style={{ margin: "0 auto 14px", display: "block" }}>
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
+                      </svg>
+                      <p style={{ fontSize: "14px", color: "#6b5452", marginBottom: "6px" }}>No saved scores yet.</p>
+                      <p style={{ fontSize: "12px", color: "#3d2a28" }}>Open any score and click Save.</p>
+                      <button onClick={() => setTab("browse")} style={{
+                        marginTop: "16px", padding: "8px 20px", borderRadius: "8px",
+                        background: "#c0392b", border: "none", color: "#fff",
+                        fontSize: "13px", fontWeight: 500, cursor: "pointer",
+                      }}>Browse scores</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+                      {/* All saved */}
+                      <CollectionCard
+                        coll={{ id: "all", name: "All saved", count: savedScores.length, covers: savedScores.slice(0, 4).map(s => s.cover_url ?? null) }}
+                        onClick={() => setActiveCollection("all")}
+                      />
+                      {/* Named collections */}
+                      {collections.filter(c => c.count > 0).map(c => (
+                        <CollectionCard key={c.id} coll={c} onClick={() => setActiveCollection(c.id)} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Create new collection */}
+                  <div style={{ marginTop: "20px", display: "flex", gap: "8px", maxWidth: "320px" }}>
+                    <input
+                      type="text" placeholder="New collection…" value={newCollName}
+                      onChange={e => setNewCollName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleCreateCollection(); }}
+                      style={{
+                        flex: 1, padding: "8px 12px", borderRadius: "8px",
+                        background: "#1e1513", border: "1px solid rgba(255,255,255,0.1)",
+                        color: "#fff", fontSize: "12px", outline: "none",
+                      }}
+                    />
+                    <button onClick={handleCreateCollection} disabled={!newCollName.trim() || addingColl}
+                      style={{ padding: "8px 14px", borderRadius: "8px", background: "#fff", color: "#211817", fontSize: "12px", fontWeight: 600, border: "none", cursor: "pointer" }}>
+                      + Create
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Scores inside a collection */}
+              {activeCollection !== null && (() => {
+                const visible = activeCollection === "all"
+                  ? savedScores
+                  : savedScores.filter((_, i) => savedCollectionIds[i] === activeCollection);
+                return visible.length > 0 ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+                    {visible.map(s => (
+                      <Link key={s.id} href={`/community/${s.id}`} style={{ textDecoration: "none" }}>
+                        <div style={{ borderRadius: "12px", overflow: "hidden", background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)" }}>
+                          <div style={{ aspectRatio: "4/3", position: "relative", background: "#1a1210" }}>
+                            {s.cover_url
+                              ? <Image src={s.cover_url} alt={s.title} fill style={{ objectFit: "cover" }} />
+                              : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  <svg width="28" height="28" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                                </div>
+                            }
+                          </div>
+                          <div style={{ padding: "10px 12px" }}>
+                            <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</p>
+                            <p style={{ fontSize: "11px", color: "#6b5452", marginTop: "2px" }}>{s.composer}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: "13px", color: "#6b5452" }}>No scores in this collection yet.</p>
+                );
+              })()}
+            </>
+          )}
         </div>
       )}
 

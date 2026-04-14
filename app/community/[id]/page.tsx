@@ -1,23 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AuthModal from "@/components/community/AuthModal";
+import SaveButton from "@/components/community/SaveButton";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 import type { Score, Comment } from "@/lib/supabase/types";
 
 export default function ScoreDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { user } = useAuth();
   const isLoggedIn = !!user;
 
   // Set to true to enable comments when the main app is ready
-  const COMMENTS_ENABLED = false;
+  const COMMENTS_ENABLED = true;
 
   const [score, setScore] = useState<Score | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -141,12 +143,15 @@ export default function ScoreDetailPage() {
 
         {/* Back link */}
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px 32px 0" }}>
-          <Link href="/community" style={{ fontSize: "13px", color: "#7a6360", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <button
+            onClick={() => router.back()}
+            style={{ fontSize: "13px", color: "#7a6360", background: "none", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", padding: 0 }}
+          >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
-            Community
-          </Link>
+            Back
+          </button>
         </div>
 
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px 32px 80px", display: "grid", gridTemplateColumns: "1fr 340px", gap: "40px", alignItems: "start" }}>
@@ -350,6 +355,12 @@ export default function ScoreDetailPage() {
 
             {/* Actions */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <SaveButton
+                scoreId={id!}
+                userId={user?.id ?? null}
+                onRequireAuth={() => { setAuthIntent("download"); setShowAuthModal(true); }}
+              />
+
               <button
                 onClick={handleLike}
                 style={{

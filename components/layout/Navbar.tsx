@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { useAuth } from "@/lib/supabase/useAuth";
+import { useNotifications } from "@/lib/supabase/useNotifications";
 import AuthModal from "@/components/community/AuthModal";
 
 const navLinks = [
@@ -18,6 +19,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const { user, handle, loading } = useAuth();
+  const unreadCount = useNotifications(user?.id ?? null);
 
   return (
     <>
@@ -95,21 +97,31 @@ export default function Navbar() {
                     My Profile
                   </Link>
                   <Link
-                    href="/community/messages"
-                    title="Messages"
+                    href="/community/notifications"
+                    title="Notifications"
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      width: "32px", height: "32px", borderRadius: "50%",
-                      background: "#c0392b", border: "none",
+                      width: "32px", height: "32px", borderRadius: "8px",
+                      background: "transparent", border: "none",
                       color: "#fff", textDecoration: "none",
-                      transition: "opacity 0.15s", flexShrink: 0,
+                      transition: "all 0.15s", flexShrink: 0,
+                      position: "relative",
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                   >
-                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                      <path d="M13.73 21a2 2 0 01-3.46 0"/>
                     </svg>
+                    {unreadCount > 0 && (
+                      <span style={{
+                        position: "absolute", top: "-2px", right: "-2px",
+                        width: "8px", height: "8px", borderRadius: "50%",
+                        background: "#c0392b",
+                        border: "1.5px solid #211817",
+                      }} />
+                    )}
                   </Link>
                 </>
               ) : (
@@ -188,7 +200,7 @@ export default function Navbar() {
           {user ? (
             <>
               <Link
-                href="/community/messages"
+                href="/community/notifications"
                 onClick={() => setMobileOpen(false)}
                 style={{
                   display: "flex", alignItems: "center", gap: "10px",
@@ -196,12 +208,23 @@ export default function Navbar() {
                   padding: "14px 0",
                   borderBottom: "1px solid rgba(255,255,255,0.05)",
                   textDecoration: "none",
+                  position: "relative",
                 }}
               >
                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 01-3.46 0"/>
                 </svg>
-                Messages
+                Notifications
+                {unreadCount > 0 && (
+                  <span style={{
+                    marginLeft: "auto",
+                    background: "#c0392b", color: "#fff",
+                    fontSize: "11px", fontWeight: 700,
+                    padding: "2px 6px", borderRadius: "10px",
+                    fontFamily: "Arial, sans-serif",
+                  }}>{unreadCount}</span>
+                )}
               </Link>
               <Link
                 href={handle ? `/community/user/${handle}` : "/community"}

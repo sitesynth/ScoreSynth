@@ -12,6 +12,7 @@ import EditScoreModal from "@/components/community/EditScoreModal";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 import type { Profile, Score } from "@/lib/supabase/types";
+import AvatarCropper from "@/components/community/AvatarCropper";
 
 // ─── Inline editable field (owner only) ────────────────────────────────────
 function InlineField({
@@ -244,6 +245,7 @@ export default function PublicUserProfilePage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarHover, setAvatarHover] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [newCollName, setNewCollName] = useState("");
   const [addingColl, setAddingColl] = useState(false);
 
@@ -376,11 +378,18 @@ export default function PublicUserProfilePage() {
   };
 
   const handleAvatarUpload = async (file: File) => {
+    // Show cropper first
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropConfirm = async (blob: Blob) => {
     if (!currentUser) return;
-    const ext = file.name.split(".").pop();
-    const path = `${currentUser.id}/avatar.${ext}`;
+    setCropSrc(null);
+    const path = `${currentUser.id}/avatar.jpg`;
     const supabase = createClient();
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from("avatars").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
     if (error) return;
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = `${data.publicUrl}?t=${Date.now()}`;
@@ -857,6 +866,13 @@ export default function PublicUserProfilePage() {
             setUserScores(prev => prev.map(s => s.id === updated.id ? updated : s));
             setEditingScore(null);
           }}
+        />
+      )}
+      {cropSrc && (
+        <AvatarCropper
+          imageSrc={cropSrc}
+          onConfirm={handleCropConfirm}
+          onCancel={() => { setCropSrc(null); if (avatarInputRef.current) avatarInputRef.current.value = ""; }}
         />
       )}
     </>

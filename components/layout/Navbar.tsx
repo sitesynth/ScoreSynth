@@ -82,23 +82,6 @@ export default function Navbar() {
               user ? (
                 <>
                   <Link
-                    href="/community/messages"
-                    title="Messages"
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      width: "30px", height: "30px", borderRadius: "50%",
-                      background: "#c0392b", border: "none",
-                      color: "#fff", textDecoration: "none",
-                      transition: "opacity 0.15s", flexShrink: 0,
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-                  >
-                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                    </svg>
-                  </Link>
-                  <Link
                     href={handle ? `/community/user/${handle}` : "/community"}
                     style={{
                       fontSize: "13px", fontWeight: 500,
@@ -110,6 +93,23 @@ export default function Navbar() {
                     onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
                   >
                     My Profile
+                  </Link>
+                  <Link
+                    href="/community/messages"
+                    title="Messages"
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: "32px", height: "32px", borderRadius: "50%",
+                      background: "#c0392b", border: "none",
+                      color: "#fff", textDecoration: "none",
+                      transition: "opacity 0.15s", flexShrink: 0,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.85")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
                   </Link>
                 </>
               ) : (

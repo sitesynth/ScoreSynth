@@ -163,7 +163,12 @@ export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Pr
         .from("profiles").select("handle").eq("id", data.user.id).single();
       onSuccess?.();
       onClose();
-      if (profile?.handle) router.push(`/community/user/${profile.handle}`);
+      if (profile?.handle) {
+        router.push(`/community/user/${profile.handle}`);
+      } else {
+        // No profile yet — go to onboarding to set up handle
+        router.push("/onboarding");
+      }
     }
   };
 

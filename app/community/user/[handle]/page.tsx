@@ -278,6 +278,8 @@ export default function PublicUserProfilePage() {
   const [newRcollName, setNewRcollName] = useState("");
   const [addingRcoll, setAddingRcoll] = useState(false);
   const [movingResourceScore, setMovingResourceScore] = useState<Score | null>(null);
+  const [resourceScoreMenuId, setResourceScoreMenuId] = useState<string | null>(null);
+  const [savedScoreMenuId, setSavedScoreMenuId] = useState<string | null>(null);
 
   const initializedRef = useRef(false);
 
@@ -525,11 +527,25 @@ export default function PublicUserProfilePage() {
     setMovingResourceScore(null);
   };
 
+  const handleRemoveFromSaved = async (scoreId: string) => {
+    if (!currentUser) return;
+    const supabase = createClient();
+    await supabase.from("saved_scores").delete().eq("score_id", scoreId).eq("user_id", currentUser.id);
+    const idx = savedScores.findIndex(s => s.id === scoreId);
+    if (idx !== -1) {
+      setSavedScores(prev => prev.filter((_, i) => i !== idx));
+      setSavedCollectionIds(prev => prev.filter((_, i) => i !== idx));
+    }
+    setSavedScoreMenuId(null);
+  };
+
   // ─── Saved tab view ──────────────────────────────────────────────────────
-  // null = collection grid, "all" = all saved, string = specific collection
+  // null = collection grid, "all" = all saved, "unsorted" = no collection, string = specific collection
   const visibleSaved = activeCollection === null ? [] :
     activeCollection === "all"
       ? savedScores
+      : activeCollection === "unsorted"
+      ? savedScores.filter((_, i) => savedCollectionIds[i] === null)
       : savedScores.filter((_, i) => savedCollectionIds[i] === activeCollection);
 
   const unsortedSaved = savedScores.filter((_, i) => savedCollectionIds[i] === null);
@@ -940,22 +956,58 @@ export default function PublicUserProfilePage() {
                           ? userScores.filter(s => !s.resource_collection_id)
                           : userScores.filter(s => s.resource_collection_id === activeResourceColl);
                         return visible.length > 0 ? (
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}
+                            onClick={() => resourceScoreMenuId && setResourceScoreMenuId(null)}>
                             {visible.map(s => (
                               <div key={s.id} style={{ position: "relative" }}>
                                 <ScoreCard score={s} isOwner={isOwner} onEdit={setEditingScore} />
                                 {isOwner && (
-                                  <button
-                                    onClick={() => setMovingResourceScore(s)}
-                                    style={{
-                                      position: "absolute", bottom: "46px", right: "10px",
-                                      fontSize: "10px", padding: "3px 8px", borderRadius: "5px",
-                                      background: "rgba(33,24,23,0.85)", border: "1px solid rgba(255,255,255,0.15)",
-                                      color: "#a89690", cursor: "pointer",
-                                    }}
-                                  >
-                                    Move
-                                  </button>
+                                  <div style={{ position: "absolute", top: "8px", right: "8px", zIndex: 10 }}>
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setResourceScoreMenuId(resourceScoreMenuId === s.id ? null : s.id); }}
+                                      style={{
+                                        width: "26px", height: "26px", borderRadius: "6px",
+                                        background: resourceScoreMenuId === s.id ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.5)",
+                                        border: "none", color: "#fff", cursor: "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        backdropFilter: "blur(4px)",
+                                      }}
+                                    >
+                                      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                                      </svg>
+                                    </button>
+                                    {resourceScoreMenuId === s.id && (
+                                      <div
+                                        onClick={e => e.stopPropagation()}
+                                        style={{
+                                          position: "absolute", top: "30px", right: 0,
+                                          background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                                          borderRadius: "9px", padding: "6px",
+                                          boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: "150px", zIndex: 20,
+                                        }}
+                                      >
+                                        <button
+                                          onClick={() => { setResourceScoreMenuId(null); setMovingResourceScore(s); }}
+                                          style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "6px" }}
+                                          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                                          onMouseLeave={e => e.currentTarget.style.background = "none"}
+                                        >
+                                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                          Move to…
+                                        </button>
+                                        <button
+                                          onClick={() => { setResourceScoreMenuId(null); setEditingScore(s); }}
+                                          style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "6px" }}
+                                          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                                          onMouseLeave={e => e.currentTarget.style.background = "none"}
+                                        >
+                                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                          Edit score
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -1021,7 +1073,7 @@ export default function PublicUserProfilePage() {
                           </button>
                           <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
                           <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
-                            {activeCollection === "all" ? "All saved" : collections.find(c => c.id === activeCollection)?.name}
+                            {activeCollection === "all" ? "All saved" : activeCollection === "unsorted" ? "Unsorted" : collections.find(c => c.id === activeCollection)?.name}
                           </span>
                         </div>
                       )}
@@ -1052,7 +1104,7 @@ export default function PublicUserProfilePage() {
                               {unsortedSaved.length > 0 && collections.length > 0 && (
                                 <CollectionCard
                                   coll={{ id: "unsorted", name: "Unsorted", count: unsortedSaved.length, covers: unsortedSaved.slice(0, 4).map(s => s.cover_url ?? null) }}
-                                  onClick={() => setActiveCollection(null)}
+                                  onClick={() => setActiveCollection("unsorted")}
                                 />
                               )}
                             </div>
@@ -1092,22 +1144,58 @@ export default function PublicUserProfilePage() {
                       {/* Scores inside a collection */}
                       {activeCollection !== null && (
                         visibleSaved.length > 0 ? (
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}
+                            onClick={() => savedScoreMenuId && setSavedScoreMenuId(null)}>
                             {visibleSaved.map(s => (
                               <div key={s.id} style={{ position: "relative" }}>
                                 <ScoreCard score={s} />
                                 {isOwner && (
-                                  <button
-                                    onClick={() => setMovingScore(s)}
-                                    style={{
-                                      position: "absolute", bottom: "46px", right: "10px",
-                                      fontSize: "10px", padding: "3px 8px", borderRadius: "5px",
-                                      background: "rgba(33,24,23,0.85)", border: "1px solid rgba(255,255,255,0.15)",
-                                      color: "#a89690", cursor: "pointer",
-                                    }}
-                                  >
-                                    Move
-                                  </button>
+                                  <div style={{ position: "absolute", top: "8px", right: "8px", zIndex: 10 }}>
+                                    <button
+                                      onClick={e => { e.stopPropagation(); setSavedScoreMenuId(savedScoreMenuId === s.id ? null : s.id); }}
+                                      style={{
+                                        width: "26px", height: "26px", borderRadius: "6px",
+                                        background: savedScoreMenuId === s.id ? "rgba(0,0,0,0.7)" : "rgba(0,0,0,0.5)",
+                                        border: "none", color: "#fff", cursor: "pointer",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        backdropFilter: "blur(4px)",
+                                      }}
+                                    >
+                                      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                                      </svg>
+                                    </button>
+                                    {savedScoreMenuId === s.id && (
+                                      <div
+                                        onClick={e => e.stopPropagation()}
+                                        style={{
+                                          position: "absolute", top: "30px", right: 0,
+                                          background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                                          borderRadius: "9px", padding: "6px",
+                                          boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: "150px", zIndex: 20,
+                                        }}
+                                      >
+                                        <button
+                                          onClick={() => { setSavedScoreMenuId(null); setMovingScore(s); }}
+                                          style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "6px" }}
+                                          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                                          onMouseLeave={e => e.currentTarget.style.background = "none"}
+                                        >
+                                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                          Move to…
+                                        </button>
+                                        <button
+                                          onClick={() => handleRemoveFromSaved(s.id)}
+                                          style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 10px", background: "none", border: "none", color: "#c0392b", fontSize: "13px", cursor: "pointer", borderRadius: "6px" }}
+                                          onMouseEnter={e => e.currentTarget.style.background = "rgba(192,57,43,0.1)"}
+                                          onMouseLeave={e => e.currentTarget.style.background = "none"}
+                                        >
+                                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                                          Remove
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             ))}

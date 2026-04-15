@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import ScoreCard from "@/components/community/ScoreCard";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -68,91 +69,6 @@ function InlineField({
       onChange={e => onChange(e.target.value)}
       onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
       style={base} />
-  );
-}
-
-// ─── Score card ─────────────────────────────────────────────────────────────
-function ScoreCard({ score, isOwner, onEdit }: {
-  score: Score; isOwner?: boolean; onEdit?: (s: Score) => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-  const router = useRouter();
-
-  return (
-    <div onClick={() => router.push(`/community/${score.id}`)} style={{ cursor: "pointer", minWidth: 0 }}>
-      <div
-        onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-        style={{
-          borderRadius: "12px", overflow: "hidden", background: "#1e1513",
-          border: `1px solid ${hovered ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)"}`,
-          transform: hovered ? "translateY(-3px)" : "translateY(0)",
-          boxShadow: hovered ? "0 8px 32px rgba(0,0,0,0.4)" : "none",
-          transition: "all 0.2s ease", display: "flex", flexDirection: "column",
-        }}
-      >
-        <div style={{ position: "relative", paddingBottom: "75%", overflow: "hidden", background: "#f5f0eb" }}>
-          {score.cover_url
-            ? <Image src={score.cover_url} alt={score.title} fill style={{ objectFit: "contain" }} />
-            : <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5">
-                  <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
-                </svg>
-              </div>
-          }
-          {hovered && (
-            <div style={{ position: "absolute", inset: 0, background: "rgba(33,24,23,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-              <span style={{ fontSize: "13px", fontWeight: 500, color: "#fff", padding: "7px 16px", borderRadius: "20px", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.2)" }}>View</span>
-              {isOwner && onEdit && (
-                <span onClick={e => { e.stopPropagation(); onEdit(score); }}
-                  style={{ fontSize: "13px", fontWeight: 500, color: "#fff", padding: "7px 16px", borderRadius: "20px", background: "rgba(192,57,43,0.7)", backdropFilter: "blur(6px)", border: "1px solid rgba(192,57,43,0.5)", cursor: "pointer" }}>
-                  Edit
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <div style={{ padding: "10px 14px 12px", display: "flex", flexDirection: "column", gap: "3px" }}>
-          <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{score.title}</p>
-          <p style={{ fontSize: "11px", color: "#6b5452" }}>{score.composer || "—"}</p>
-          {score.instruments && (score.instruments as string[]).length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "5px" }}>
-              {(score.instruments as string[]).slice(0, 3).map(inst => (
-                <span
-                  key={inst}
-                  onClick={e => { e.stopPropagation(); router.push(`/community?q=${encodeURIComponent(inst)}`); }}
-                  style={{
-                    fontSize: "10px", padding: "2px 7px", borderRadius: "20px",
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: "#a89690", cursor: "pointer", whiteSpace: "nowrap",
-                    transition: "background 0.15s, color 0.15s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#e8dbd8"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#a89690"; }}
-                >
-                  {inst}
-                </span>
-              ))}
-            </div>
-          )}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "6px" }}>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
-                <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-                {score.likes_count.toLocaleString()}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                {score.views_count.toLocaleString()}
-              </span>
-            </div>
-            <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.06)", color: "#a89690" }}>
-              {score.tag === "free" ? "Free" : score.price_display ?? "Premium"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -356,6 +272,13 @@ export default function PublicUserProfilePage() {
   const [addingColl, setAddingColl] = useState(false);
   const [movingScore, setMovingScore] = useState<Score | null>(null);
 
+  // Resource collections state
+  const [resourceColls, setResourceColls] = useState<Collection[]>([]);
+  const [activeResourceColl, setActiveResourceColl] = useState<string | "all" | null>(null);
+  const [newRcollName, setNewRcollName] = useState("");
+  const [addingRcoll, setAddingRcoll] = useState(false);
+  const [movingResourceScore, setMovingResourceScore] = useState<Score | null>(null);
+
   const initializedRef = useRef(false);
 
   // Auto-save text fields with debounce
@@ -400,7 +323,7 @@ export default function PublicUserProfilePage() {
 
       const [scoresRes, savedRes, fCountRes, fgCountRes] = await Promise.all([
         supabase.from("scores")
-          .select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at, cover_url")
+          .select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at, cover_url, resource_collection_id")
           .eq("author_id", p.id).order("likes_count", { ascending: false }),
         supabase.from("saved_scores")
           .select("collection_id, scores(id, title, composer, tag, price_display, likes_count, views_count, category, cover_url, author_id, pdf_url, midi_url, instruments, pages, publisher, description, difficulty, created_at, updated_at)")
@@ -409,12 +332,23 @@ export default function PublicUserProfilePage() {
         supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", p.id),
       ]);
 
-      setUserScores((scoresRes.data as Score[]) ?? []);
+      const scores = (scoresRes.data as Score[]) ?? [];
+      setUserScores(scores);
+
+      // Load resource collections
+      const { data: rcollData } = await supabase.from("resource_collections")
+        .select("id, name").eq("user_id", p.id).order("created_at");
+      const rawRcolls = (rcollData ?? []) as { id: string; name: string }[];
+      const rcolls: Collection[] = rawRcolls.map(c => {
+        const collScores = scores.filter(s => s.resource_collection_id === c.id);
+        return { id: c.id, name: c.name, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
+      });
+      setResourceColls(rcolls);
 
       const savedRows = (savedRes.data ?? []) as unknown as { collection_id: string | null; scores: Score }[];
-      const scores = savedRows.map(r => r.scores).filter(Boolean);
+      const savedScores = savedRows.map(r => r.scores).filter(Boolean);
       const collIds = savedRows.map(r => r.collection_id);
-      setSavedScores(scores);
+      setSavedScores(savedScores);
       setSavedCollectionIds(collIds);
 
       setFollowerCount(fCountRes.count ?? 0);
@@ -432,7 +366,7 @@ export default function PublicUserProfilePage() {
           id: c.id,
           name: c.name,
           count: idxs.length,
-          covers: idxs.slice(0, 4).map(i => scores[i]?.cover_url ?? null),
+          covers: idxs.slice(0, 4).map(i => savedScores[i]?.cover_url ?? null),
         };
       });
       setCollections(colls);
@@ -546,6 +480,49 @@ export default function PublicUserProfilePage() {
     const idx = savedScores.findIndex(s => s.id === scoreId);
     if (idx !== -1) setSavedCollectionIds(prev => prev.map((id, i) => i === idx ? toCollId : id));
     setMovingScore(null);
+  };
+
+  // ─── Resource collection handlers ───────────────────────────────────────
+  const handleCreateResourceColl = async () => {
+    if (!newRcollName.trim() || !currentUser) return;
+    setAddingRcoll(true);
+    const supabase = createClient();
+    const { data } = await supabase.from("resource_collections")
+      .insert({ user_id: currentUser.id, name: newRcollName.trim() })
+      .select("id, name").single();
+    if (data) {
+      setResourceColls(prev => [...prev, { id: data.id, name: data.name, count: 0, covers: [] }]);
+      setNewRcollName("");
+    }
+    setAddingRcoll(false);
+  };
+
+  const handleDeleteResourceColl = async (collId: string) => {
+    if (!currentUser || !window.confirm("Delete this collection? Scores will move back to All resources.")) return;
+    const supabase = createClient();
+    await supabase.from("resource_collections").delete().eq("id", collId).eq("user_id", currentUser.id);
+    setResourceColls(prev => prev.filter(c => c.id !== collId));
+    setUserScores(prev => prev.map(s => s.resource_collection_id === collId ? { ...s, resource_collection_id: null } : s));
+  };
+
+  const handleRenameResourceColl = async (collId: string, newName: string) => {
+    if (!currentUser) return;
+    const supabase = createClient();
+    await supabase.from("resource_collections").update({ name: newName }).eq("id", collId).eq("user_id", currentUser.id);
+    setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, name: newName } : c));
+  };
+
+  const handleMoveResourceScore = async (scoreId: string, toCollId: string | null) => {
+    if (!currentUser) return;
+    const supabase = createClient();
+    await supabase.from("scores").update({ resource_collection_id: toCollId }).eq("id", scoreId).eq("author_id", currentUser.id);
+    setUserScores(prev => prev.map(s => s.id === scoreId ? { ...s, resource_collection_id: toCollId } : s));
+    // Update collection counts & covers
+    setResourceColls(prev => prev.map(c => {
+      const collScores = userScores.map(s => s.id === scoreId ? { ...s, resource_collection_id: toCollId } : s).filter(s => s.resource_collection_id === c.id);
+      return { ...c, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
+    }));
+    setMovingResourceScore(null);
   };
 
   // ─── Saved tab view ──────────────────────────────────────────────────────
@@ -872,15 +849,163 @@ export default function PublicUserProfilePage() {
 
                   {/* Resources tab */}
                   {activeTab === "resources" && (
-                    userScores.length > 0 ? (
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
-                        {userScores.map(s => (
-                          <ScoreCard key={s.id} score={s} isOwner={isOwner} onEdit={setEditingScore} />
-                        ))}
-                      </div>
-                    ) : (
-                      <p style={{ fontSize: "13px", color: "#6b5452" }}>No resources published yet.</p>
-                    )
+                    <div>
+                      {/* Breadcrumb when inside a collection */}
+                      {activeResourceColl !== null && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                          <button onClick={() => setActiveResourceColl(null)}
+                            style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
+                            Collections
+                          </button>
+                          <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
+                          <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
+                            {activeResourceColl === "all" ? "All resources" : resourceColls.find(c => c.id === activeResourceColl)?.name}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Collection overview */}
+                      {activeResourceColl === null && (
+                        <>
+                          {userScores.length === 0 ? (
+                            <p style={{ fontSize: "13px", color: "#6b5452" }}>No resources published yet.</p>
+                          ) : (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                              {/* "All resources" card */}
+                              <CollectionCard
+                                coll={{ id: "all", name: "All resources", count: userScores.length, covers: userScores.slice(0, 4).map(s => s.cover_url ?? null) }}
+                                onClick={() => setActiveResourceColl("all")}
+                              />
+                              {/* Named collections */}
+                              {resourceColls.map(c => (
+                                <CollectionCard
+                                  key={c.id} coll={c}
+                                  onClick={() => setActiveResourceColl(c.id)}
+                                  isOwner={isOwner}
+                                  onDelete={() => handleDeleteResourceColl(c.id)}
+                                  onRename={name => handleRenameResourceColl(c.id, name)}
+                                />
+                              ))}
+                              {/* Unsorted */}
+                              {(() => {
+                                const unsorted = userScores.filter(s => !s.resource_collection_id);
+                                return unsorted.length > 0 && resourceColls.length > 0 ? (
+                                  <CollectionCard
+                                    coll={{ id: "unsorted", name: "Unsorted", count: unsorted.length, covers: unsorted.slice(0, 4).map(s => s.cover_url ?? null) }}
+                                    onClick={() => setActiveResourceColl("unsorted" as string)}
+                                  />
+                                ) : null;
+                              })()}
+                            </div>
+                          )}
+
+                          {/* Create collection (owner only) */}
+                          {isOwner && userScores.length > 0 && (
+                            <div style={{ marginTop: "20px", display: "flex", gap: "8px", maxWidth: "340px" }}>
+                              <input
+                                type="text"
+                                placeholder="New collection name…"
+                                value={newRcollName}
+                                onChange={e => setNewRcollName(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter") handleCreateResourceColl(); }}
+                                style={{
+                                  flex: 1, padding: "8px 12px", borderRadius: "8px",
+                                  background: "#1e1513", border: "1px solid rgba(255,255,255,0.1)",
+                                  color: "#fff", fontSize: "13px", outline: "none",
+                                }}
+                              />
+                              <button
+                                onClick={handleCreateResourceColl}
+                                disabled={!newRcollName.trim() || addingRcoll}
+                                style={{
+                                  padding: "8px 16px", borderRadius: "8px", background: "#fff",
+                                  color: "#211817", fontSize: "13px", fontWeight: 600,
+                                  border: "none", cursor: "pointer",
+                                  opacity: !newRcollName.trim() || addingRcoll ? 0.5 : 1,
+                                }}
+                              >
+                                + Create
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* Scores inside a collection */}
+                      {activeResourceColl !== null && (() => {
+                        const visible = activeResourceColl === "all"
+                          ? userScores
+                          : activeResourceColl === "unsorted"
+                          ? userScores.filter(s => !s.resource_collection_id)
+                          : userScores.filter(s => s.resource_collection_id === activeResourceColl);
+                        return visible.length > 0 ? (
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                            {visible.map(s => (
+                              <div key={s.id} style={{ position: "relative" }}>
+                                <ScoreCard score={s} isOwner={isOwner} onEdit={setEditingScore} />
+                                {isOwner && (
+                                  <button
+                                    onClick={() => setMovingResourceScore(s)}
+                                    style={{
+                                      position: "absolute", bottom: "46px", right: "10px",
+                                      fontSize: "10px", padding: "3px 8px", borderRadius: "5px",
+                                      background: "rgba(33,24,23,0.85)", border: "1px solid rgba(255,255,255,0.15)",
+                                      color: "#a89690", cursor: "pointer",
+                                    }}
+                                  >
+                                    Move
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: "13px", color: "#6b5452" }}>No scores in this collection yet.</p>
+                        );
+                      })()}
+
+                      {/* Move score modal */}
+                      {movingResourceScore && (
+                        <div
+                          onClick={() => setMovingResourceScore(null)}
+                          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <div onClick={e => e.stopPropagation()} style={{
+                            background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: "14px", padding: "20px", minWidth: "280px",
+                            boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+                          }}>
+                            <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff", marginBottom: "14px" }}>
+                              Move &ldquo;{movingResourceScore.title}&rdquo; to…
+                            </p>
+                            <button
+                              onClick={() => handleMoveResourceScore(movingResourceScore.id, null)}
+                              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left" }}
+                              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                              onMouseLeave={e => e.currentTarget.style.background = "none"}
+                            >
+                              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                              All resources (no collection)
+                            </button>
+                            {resourceColls.map(c => (
+                              <button key={c.id}
+                                onClick={() => handleMoveResourceScore(movingResourceScore.id, c.id)}
+                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
+                              >
+                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.5 }}><path d="M3 7a2 2 0 012-2h3.586a1 1 0 01.707.293L10.414 6.4A1 1 0 0011.121 6.4L12.3 5.3A1 1 0 0113 5h6a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+                                {c.name}
+                              </button>
+                            ))}
+                            <button onClick={() => setMovingResourceScore(null)} style={{ width: "100%", marginTop: "8px", padding: "8px", background: "none", border: "none", color: "#6b5452", fontSize: "12px", cursor: "pointer" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {/* Saved tab */}

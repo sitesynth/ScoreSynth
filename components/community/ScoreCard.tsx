@@ -27,6 +27,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         transform: hovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: hovered ? "0 12px 36px rgba(0,0,0,0.45)" : "none",
         transition: "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.18s ease",
+        height: "100%",  /* stretch to fill grid cell → uniform row height */
       }}
     >
       {/* ── Image area ── */}
@@ -154,7 +155,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
       )}
 
       {/* ── Info ── */}
-      <div style={{ padding: "10px 14px 12px", display: "flex", flexDirection: "column", gap: "3px" }}>
+      <div style={{ padding: "10px 14px 12px", display: "flex", flexDirection: "column", gap: "3px", flex: 1 }}>
         <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>
           {score.title}
         </p>
@@ -184,7 +185,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
           </div>
         )}
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "7px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "7px" }}>
           <div style={{ display: "flex", gap: "12px" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
               <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">

@@ -14,7 +14,7 @@ type Participant = {
 type Message = {
   id: string;
   sender_id: string;
-  body: string;
+  content: string;
   created_at: string;
 };
 
@@ -52,7 +52,7 @@ export default function MessageModal({
       // Load history
       const { data: msgs } = await supabase
         .from("messages")
-        .select("id, sender_id, body, created_at")
+        .select("id, sender_id, content, created_at")
         .eq("conversation_id", conv.id)
         .order("created_at", { ascending: true });
       setMessages((msgs as Message[]) ?? []);
@@ -91,11 +91,11 @@ export default function MessageModal({
 
   async function send() {
     if (!draft.trim() || !convId || sending) return;
-    const body = draft.trim();
+    const content = draft.trim();
     setDraft("");
     setSending(true);
     const now = new Date().toISOString();
-    await supabase.from("messages").insert({ conversation_id: convId, sender_id: currentUserId, body });
+    await supabase.from("messages").insert({ conversation_id: convId, sender_id: currentUserId, content });
     await supabase.from("conversations").update({ updated_at: now }).eq("id", convId);
     setSending(false);
   }
@@ -189,7 +189,7 @@ export default function MessageModal({
                     fontSize: "13px", color: "#fff", lineHeight: 1.5,
                     wordBreak: "break-word",
                   }}>
-                    {msg.body}
+                    {msg.content}
                   </div>
                 </div>
               );

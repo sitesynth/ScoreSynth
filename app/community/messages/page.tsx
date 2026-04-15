@@ -24,7 +24,7 @@ type ConvRow = {
 type Message = {
   id: string;
   sender_id: string;
-  body: string;
+  content: string;
   created_at: string;
 };
 
@@ -132,7 +132,7 @@ function MessagesInner() {
         : Promise.resolve({ data: [] }),
       convData.length > 0
         ? supabase.from("messages")
-            .select("conversation_id, body, created_at")
+            .select("conversation_id, content, created_at")
             .in("conversation_id", convData.map(c => c.id))
             .order("created_at", { ascending: false })
         : Promise.resolve({ data: [] }),
@@ -144,8 +144,8 @@ function MessagesInner() {
 
     // Last message per conversation
     const lastBodyMap = new Map<string, string>();
-    for (const msg of (msgsRes.data ?? []) as { conversation_id: string; body: string }[]) {
-      if (!lastBodyMap.has(msg.conversation_id)) lastBodyMap.set(msg.conversation_id, msg.body);
+    for (const msg of (msgsRes.data ?? []) as { conversation_id: string; content: string }[]) {
+      if (!lastBodyMap.has(msg.conversation_id)) lastBodyMap.set(msg.conversation_id, msg.content);
     }
 
     const rows: ConvRow[] = convData.map(c => {
@@ -223,7 +223,7 @@ function MessagesInner() {
     const supabase = supabaseRef.current;
     const { data } = await supabase
       .from("messages")
-      .select("id, sender_id, body, created_at")
+      .select("id, sender_id, content, created_at")
       .eq("conversation_id", convId)
       .order("created_at", { ascending: true });
     setMessages((data as Message[]) ?? []);
@@ -246,7 +246,7 @@ function MessagesInner() {
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 30);
           // Update last_body in sidebar
           setConvs(prev => prev.map(c =>
-            c.id === convId ? { ...c, last_body: msg.body, updated_at: msg.created_at } : c
+            c.id === convId ? { ...c, last_body: msg.content, updated_at: msg.created_at } : c
           ));
         }
       )
@@ -255,14 +255,14 @@ function MessagesInner() {
 
   async function sendMessage() {
     if (!draft.trim() || !activeConvId || !user || sending) return;
-    const body = draft.trim();
+    const content = draft.trim();
     setDraft("");
     setSending(true);
 
     const supabase = supabaseRef.current;
     const now = new Date().toISOString();
 
-    await supabase.from("messages").insert({ conversation_id: activeConvId, sender_id: user.id, body });
+    await supabase.from("messages").insert({ conversation_id: activeConvId, sender_id: user.id, content });
     await supabase.from("conversations").update({ updated_at: now }).eq("id", activeConvId);
 
     setSending(false);
@@ -474,7 +474,7 @@ function MessagesInner() {
                             fontSize: "13px", color: "#fff", lineHeight: 1.55,
                             wordBreak: "break-word",
                           }}>
-                            {msg.body}
+                            {msg.content}
                           </div>
                         </div>
                       );

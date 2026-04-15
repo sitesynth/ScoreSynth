@@ -914,7 +914,7 @@ export default function PublicUserProfilePage() {
                                 onClick={() => setActiveCollection("all")}
                               />
                               {/* Named collections */}
-                              {collections.filter(c => c.count > 0).map(c => (
+                              {collections.map(c => (
                                 <CollectionCard
                                   key={c.id} coll={c}
                                   onClick={() => setActiveCollection(c.id)}

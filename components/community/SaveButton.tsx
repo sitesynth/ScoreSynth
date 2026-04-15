@@ -115,12 +115,11 @@ export default function SaveButton({ scoreId, userId, onRequireAuth }: Props) {
 
   return (
     <div style={{ position: "relative" }}>
-      {/* Main button */}
+      {/* Main button — always opens picker */}
       <button
         onClick={() => {
           if (!userId) { onRequireAuth(); return; }
-          if (!saved) doSave(null);
-          else setShowPicker(v => !v);
+          setShowPicker(v => !v);
         }}
         disabled={loading}
         style={{
@@ -139,21 +138,14 @@ export default function SaveButton({ scoreId, userId, onRequireAuth }: Props) {
         {saved ? "Saved" : "Save"}
       </button>
 
-      {/* "In collection" hint */}
-      {saved && (
-        <button
-          onClick={() => setShowPicker(v => !v)}
-          style={{
-            display: "block", width: "100%", textAlign: "center",
-            fontSize: "11px", color: "#6b5452", background: "none",
-            border: "none", cursor: "pointer", padding: "5px 0 0",
-          }}
-        >
-          {collectionName ? `In "${collectionName}" · change` : "Add to collection ▾"}
-        </button>
+      {/* Collection hint */}
+      {saved && collectionName && (
+        <p style={{ textAlign: "center", fontSize: "11px", color: "#6b5452", marginTop: "4px" }}>
+          In &ldquo;{collectionName}&rdquo;
+        </p>
       )}
 
-      {/* Collection picker */}
+      {/* Picker */}
       {showPicker && (
         <div
           ref={pickerRef}
@@ -168,12 +160,12 @@ export default function SaveButton({ scoreId, userId, onRequireAuth }: Props) {
             Save to
           </p>
 
-          {/* All saved */}
+          {/* No collection */}
           <button
             onClick={() => doSave(null)}
             style={{
               width: "100%", padding: "8px 10px", textAlign: "left", borderRadius: "7px",
-              background: collectionId === null ? "rgba(255,255,255,0.08)" : "none",
+              background: collectionId === null && saved ? "rgba(255,255,255,0.08)" : "none",
               border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer",
               display: "flex", alignItems: "center", gap: "8px",
             }}
@@ -231,16 +223,18 @@ export default function SaveButton({ scoreId, userId, onRequireAuth }: Props) {
           </div>
 
           {/* Unsave */}
-          <button
-            onClick={doUnsave}
-            style={{
-              width: "100%", marginTop: "8px", padding: "7px",
-              background: "none", border: "none", color: "#c0392b",
-              fontSize: "12px", cursor: "pointer", borderRadius: "7px",
-            }}
-          >
-            Remove from saved
-          </button>
+          {saved && (
+            <button
+              onClick={doUnsave}
+              style={{
+                width: "100%", marginTop: "8px", padding: "7px",
+                background: "none", border: "none", color: "#c0392b",
+                fontSize: "12px", cursor: "pointer", borderRadius: "7px",
+              }}
+            >
+              Remove from saved
+            </button>
+          )}
         </div>
       )}
     </div>

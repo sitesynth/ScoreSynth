@@ -159,42 +159,147 @@ function ScoreCard({ score, isOwner, onEdit }: {
 // ─── Collection card (Pinterest style) ──────────────────────────────────────
 type Collection = { id: string; name: string; count: number; covers: (string | null)[] };
 
-function CollectionCard({ coll, onClick }: { coll: Collection; onClick: () => void }) {
+function CollectionCard({ coll, onClick, isOwner, onDelete, onRename }: {
+  coll: Collection;
+  onClick: () => void;
+  isOwner?: boolean;
+  onDelete?: () => void;
+  onRename?: (newName: string) => void;
+}) {
   const [hovered, setHovered] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameVal, setRenameVal] = useState(coll.name);
+  const menuRef = useRef<HTMLDivElement>(null);
   const covers = coll.covers.slice(0, 4);
   while (covers.length < 4) covers.push(null);
 
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return;
+    const h = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [menuOpen]);
+
   return (
     <div
-      onClick={onClick}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{
-        borderRadius: "12px", overflow: "hidden", background: "#1e1513",
-        border: `1px solid ${hovered ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)"}`,
-        transform: hovered ? "translateY(-2px)" : "translateY(0)",
-        boxShadow: hovered ? "0 6px 24px rgba(0,0,0,0.4)" : "none",
-        transition: "all 0.2s ease", cursor: "pointer",
-      }}
+      style={{ position: "relative" }}
     >
-      {/* 2×2 cover grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", aspectRatio: "1/1" }}>
-        {covers.map((src, i) => (
-          <div key={i} style={{ position: "relative", overflow: "hidden", background: "#1a1210" }}>
-            {src
-              ? <Image src={src} alt="" fill style={{ objectFit: "cover" }} />
-              : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" viewBox="0 0 24 24">
-                    <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
-                  </svg>
-                </div>
-            }
-          </div>
-        ))}
+      <div
+        onClick={onClick}
+        style={{
+          borderRadius: "12px", overflow: "hidden", background: "#1e1513",
+          border: `1px solid ${hovered ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)"}`,
+          transform: hovered ? "translateY(-2px)" : "translateY(0)",
+          boxShadow: hovered ? "0 6px 24px rgba(0,0,0,0.4)" : "none",
+          transition: "all 0.2s ease", cursor: "pointer",
+        }}
+      >
+        {/* 2×2 cover grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", aspectRatio: "1/1" }}>
+          {covers.map((src, i) => (
+            <div key={i} style={{ position: "relative", overflow: "hidden", background: "#1a1210" }}>
+              {src
+                ? <Image src={src} alt="" fill style={{ objectFit: "cover" }} />
+                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" viewBox="0 0 24 24">
+                      <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+                    </svg>
+                  </div>
+              }
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: "10px 12px" }}>
+          {renaming ? (
+            <input
+              autoFocus
+              value={renameVal}
+              onClick={e => e.stopPropagation()}
+              onChange={e => setRenameVal(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && renameVal.trim()) { onRename?.(renameVal.trim()); setRenaming(false); }
+                if (e.key === "Escape") { setRenameVal(coll.name); setRenaming(false); }
+              }}
+              onBlur={() => { if (renameVal.trim()) onRename?.(renameVal.trim()); setRenaming(false); }}
+              style={{
+                background: "none", border: "none", borderBottom: "1px solid rgba(255,255,255,0.3)",
+                color: "#fff", fontSize: "13px", fontWeight: 500, outline: "none", width: "100%",
+              }}
+            />
+          ) : (
+            <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", marginBottom: "2px" }}>{coll.name}</p>
+          )}
+          <p style={{ fontSize: "11px", color: "#6b5452" }}>{coll.count} {coll.count === 1 ? "score" : "scores"}</p>
+        </div>
       </div>
-      <div style={{ padding: "10px 12px" }}>
-        <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", marginBottom: "2px" }}>{coll.name}</p>
-        <p style={{ fontSize: "11px", color: "#6b5452" }}>{coll.count} {coll.count === 1 ? "score" : "scores"}</p>
-      </div>
+
+      {/* Owner menu button */}
+      {isOwner && coll.id !== "all" && (
+        <div ref={menuRef} style={{ position: "absolute", top: "8px", right: "8px", zIndex: 10 }}>
+          <button
+            onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
+            style={{
+              width: "26px", height: "26px", borderRadius: "6px",
+              background: menuOpen || hovered ? "rgba(0,0,0,0.55)" : "transparent",
+              border: "none", color: "#fff", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.15s",
+            }}
+          >
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            </svg>
+          </button>
+          {menuOpen && (
+            <div style={{
+              position: "absolute", top: "30px", right: 0,
+              background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "9px", padding: "6px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: "150px",
+            }}>
+              <button
+                onClick={e => { e.stopPropagation(); setMenuOpen(false); setRenaming(true); setRenameVal(coll.name); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  width: "100%", padding: "8px 10px", background: "none",
+                  border: "none", color: "#e8dbd8", fontSize: "13px",
+                  cursor: "pointer", borderRadius: "6px", textAlign: "left",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Rename
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete?.(); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  width: "100%", padding: "8px 10px", background: "none",
+                  border: "none", color: "#c0392b", fontSize: "13px",
+                  cursor: "pointer", borderRadius: "6px", textAlign: "left",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(192,57,43,0.1)"}
+                onMouseLeave={e => e.currentTarget.style.background = "none"}
+              >
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                </svg>
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -249,6 +354,7 @@ export default function PublicUserProfilePage() {
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [newCollName, setNewCollName] = useState("");
   const [addingColl, setAddingColl] = useState(false);
+  const [movingScore, setMovingScore] = useState<Score | null>(null);
 
   const initializedRef = useRef(false);
 
@@ -413,6 +519,33 @@ export default function PublicUserProfilePage() {
       setNewCollName("");
     }
     setAddingColl(false);
+  };
+
+  const handleDeleteCollection = async (collId: string) => {
+    if (!currentUser || !window.confirm("Delete this collection? Scores will move to All saved.")) return;
+    const supabase = createClient();
+    await supabase.from("collections").delete().eq("id", collId).eq("user_id", currentUser.id);
+    setCollections(prev => prev.filter(c => c.id !== collId));
+    setSavedCollectionIds(prev => prev.map(id => id === collId ? null : id));
+  };
+
+  const handleRenameCollection = async (collId: string, newName: string) => {
+    if (!currentUser) return;
+    const supabase = createClient();
+    await supabase.from("collections").update({ name: newName }).eq("id", collId).eq("user_id", currentUser.id);
+    setCollections(prev => prev.map(c => c.id === collId ? { ...c, name: newName } : c));
+  };
+
+  const handleMoveScore = async (scoreId: string, toCollId: string | null) => {
+    if (!currentUser) return;
+    const supabase = createClient();
+    await supabase.from("saved_scores")
+      .update({ collection_id: toCollId })
+      .eq("score_id", scoreId)
+      .eq("user_id", currentUser.id);
+    const idx = savedScores.findIndex(s => s.id === scoreId);
+    if (idx !== -1) setSavedCollectionIds(prev => prev.map((id, i) => i === idx ? toCollId : id));
+    setMovingScore(null);
   };
 
   // ─── Saved tab view ──────────────────────────────────────────────────────
@@ -782,9 +915,15 @@ export default function PublicUserProfilePage() {
                               />
                               {/* Named collections */}
                               {collections.filter(c => c.count > 0).map(c => (
-                                <CollectionCard key={c.id} coll={c} onClick={() => setActiveCollection(c.id)} />
+                                <CollectionCard
+                                  key={c.id} coll={c}
+                                  onClick={() => setActiveCollection(c.id)}
+                                  isOwner={isOwner}
+                                  onDelete={() => handleDeleteCollection(c.id)}
+                                  onRename={name => handleRenameCollection(c.id, name)}
+                                />
                               ))}
-                              {/* Unsorted (if any scores not in a collection) */}
+                              {/* Unsorted */}
                               {unsortedSaved.length > 0 && collections.length > 0 && (
                                 <CollectionCard
                                   coll={{ id: "unsorted", name: "Unsorted", count: unsortedSaved.length, covers: unsortedSaved.slice(0, 4).map(s => s.cover_url ?? null) }}
@@ -829,11 +968,69 @@ export default function PublicUserProfilePage() {
                       {activeCollection !== null && (
                         visibleSaved.length > 0 ? (
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
-                            {visibleSaved.map(s => <ScoreCard key={s.id} score={s} />)}
+                            {visibleSaved.map(s => (
+                              <div key={s.id} style={{ position: "relative" }}>
+                                <ScoreCard score={s} />
+                                {isOwner && (
+                                  <button
+                                    onClick={() => setMovingScore(s)}
+                                    style={{
+                                      position: "absolute", bottom: "46px", right: "10px",
+                                      fontSize: "10px", padding: "3px 8px", borderRadius: "5px",
+                                      background: "rgba(33,24,23,0.85)", border: "1px solid rgba(255,255,255,0.15)",
+                                      color: "#a89690", cursor: "pointer",
+                                    }}
+                                  >
+                                    Move
+                                  </button>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <p style={{ fontSize: "13px", color: "#6b5452" }}>No scores in this collection yet.</p>
                         )
+                      )}
+
+                      {/* Move score modal */}
+                      {movingScore && (
+                        <div
+                          onClick={() => setMovingScore(null)}
+                          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                          <div onClick={e => e.stopPropagation()} style={{
+                            background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: "14px", padding: "20px", minWidth: "280px",
+                            boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+                          }}>
+                            <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff", marginBottom: "14px" }}>
+                              Move &ldquo;{movingScore.title}&rdquo; to…
+                            </p>
+                            <button
+                              onClick={() => handleMoveScore(movingScore.id, null)}
+                              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left" }}
+                              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                              onMouseLeave={e => e.currentTarget.style.background = "none"}
+                            >
+                              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                              All saved (no collection)
+                            </button>
+                            {collections.map(c => (
+                              <button key={c.id}
+                                onClick={() => handleMoveScore(movingScore.id, c.id)}
+                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
+                              >
+                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.5 }}><path d="M3 7a2 2 0 012-2h3.586a1 1 0 01.707.293L10.414 6.4A1 1 0 0011.121 6.4L12.3 5.3A1 1 0 0113 5h6a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+                                {c.name}
+                              </button>
+                            ))}
+                            <button onClick={() => setMovingScore(null)} style={{ width: "100%", marginTop: "8px", padding: "8px", background: "none", border: "none", color: "#6b5452", fontSize: "12px", cursor: "pointer" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}

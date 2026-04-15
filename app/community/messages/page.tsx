@@ -262,8 +262,28 @@ function MessagesInner() {
     const supabase = supabaseRef.current;
     const now = new Date().toISOString();
 
-    await supabase.from("messages").insert({ conversation_id: activeConvId, sender_id: user.id, content });
-    await supabase.from("conversations").update({ updated_at: now }).eq("id", activeConvId);
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const tempMsg: Message = { id: tempId, sender_id: user.id, content, created_at: now };
+    setMessages(prev => [...prev, tempMsg]);
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 30);
+
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ conversation_id: activeConvId, sender_id: user.id, content })
+      .select("id, sender_id, content, created_at")
+      .single();
+
+    if (error) {
+      console.error("Message send error:", error);
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+    } else if (data) {
+      setMessages(prev => prev.map(m => m.id === tempId ? (data as Message) : m));
+      await supabase.from("conversations").update({ updated_at: now }).eq("id", activeConvId);
+      setConvs(prev => prev.map(c =>
+        c.id === activeConvId ? { ...c, last_body: content, updated_at: now } : c
+      ));
+    }
 
     setSending(false);
   }

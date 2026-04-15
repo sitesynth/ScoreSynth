@@ -95,8 +95,29 @@ export default function MessageModal({
     setDraft("");
     setSending(true);
     const now = new Date().toISOString();
-    await supabase.from("messages").insert({ conversation_id: convId, sender_id: currentUserId, content });
-    await supabase.from("conversations").update({ updated_at: now }).eq("id", convId);
+
+    // Optimistic update — show immediately
+    const tempId = `temp-${Date.now()}`;
+    const tempMsg: Message = { id: tempId, sender_id: currentUserId, content, created_at: now };
+    setMessages(prev => [...prev, tempMsg]);
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 30);
+
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ conversation_id: convId, sender_id: currentUserId, content })
+      .select("id, sender_id, content, created_at")
+      .single();
+
+    if (error) {
+      console.error("Message send error:", error);
+      // Remove temp message on failure
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+    } else if (data) {
+      // Replace temp with real row
+      setMessages(prev => prev.map(m => m.id === tempId ? (data as Message) : m));
+      await supabase.from("conversations").update({ updated_at: now }).eq("id", convId);
+    }
+
     setSending(false);
   }
 

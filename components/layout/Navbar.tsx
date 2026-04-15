@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/supabase/useAuth";
 import { useNotifications, NotificationItem } from "@/lib/supabase/useNotifications";
 import AuthModal from "@/components/community/AuthModal";
+import AccountSettingsModal from "@/components/community/AccountSettingsModal";
+import { createClient } from "@/lib/supabase/client";
 
 const navLinks = [
   { label: "How It Works", href: "/#how-it-works" },
@@ -51,12 +53,34 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showUserDrop, setShowUserDrop] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string>("");
   const router = useRouter();
   const { user, handle, loading } = useAuth();
   const { unreadCount, items, markRead, markAllRead } = useNotifications(user?.id ?? null);
   const notifsRef = useRef<HTMLDivElement>(null);
+  const userDropRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
+  // Fetch avatar + display name when logged in
+  useEffect(() => {
+    if (!user) { setAvatarUrl(null); setDisplayName(""); return; }
+    const supabase = createClient();
+    supabase
+      .from("profiles")
+      .select("display_name, avatar_url")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setDisplayName(data.display_name || "");
+          setAvatarUrl(data.avatar_url || null);
+        }
+      });
+  }, [user?.id]);
+
+  // Close notifs dropdown on outside click
   useEffect(() => {
     if (!showNotifs) return;
     const handler = (e: MouseEvent) => {
@@ -67,6 +91,22 @@ export default function Navbar() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showNotifs]);
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    if (!showUserDrop) return;
+    const handler = (e: MouseEvent) => {
+      if (userDropRef.current && !userDropRef.current.contains(e.target as Node)) {
+        setShowUserDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showUserDrop]);
+
+  const initials = displayName
+    ? displayName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+    : (user?.email?.[0] ?? "U").toUpperCase();
 
   const previewItems = items.slice(0, 5);
 
@@ -132,19 +172,114 @@ export default function Navbar() {
             {!loading && (
               user ? (
                 <>
-                  <Link
-                    href={handle ? `/community/user/${handle}` : "/community"}
-                    style={{
-                      fontSize: "13px", fontWeight: 500,
-                      padding: "8px 18px", borderRadius: "8px",
-                      background: "#fff", color: "#211817",
-                      transition: "opacity 0.15s", textDecoration: "none",
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-                  >
-                    My Profile
-                  </Link>
+                  {/* Avatar + user dropdown */}
+                  <div ref={userDropRef} style={{ position: "relative", flexShrink: 0 }}>
+                    <button
+                      onClick={() => { setShowUserDrop(v => !v); setShowNotifs(false); }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "7px",
+                        background: showUserDrop ? "rgba(255,255,255,0.07)" : "transparent",
+                        border: "1px solid rgba(255,255,255,0.24)",
+                        borderRadius: "8px", padding: "4px 8px 4px 4px",
+                        cursor: "pointer", transition: "background 0.15s, border-color 0.15s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.42)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = showUserDrop ? "rgba(255,255,255,0.07)" : "transparent"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.24)"; }}
+                    >
+                      <div style={{
+                        width: "26px", height: "26px", borderRadius: "50%", background: "#c0392b",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "11px", fontWeight: 600, color: "#fff", flexShrink: 0, overflow: "hidden",
+                      }}>
+                        {avatarUrl
+                          ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : initials}
+                      </div>
+                      <svg width="11" height="11" fill="none" stroke="#a89690" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    </button>
+
+                    {showUserDrop && (
+                      <div style={{
+                        position: "absolute", top: "calc(100% + 8px)", right: 0,
+                        width: "220px", zIndex: 200,
+                        background: "#1e1412",
+                        border: "1px solid rgba(255,255,255,0.09)",
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
+                      }}>
+                        {/* Identity */}
+                        <div style={{ padding: "12px 14px 10px", display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div style={{
+                            width: "36px", height: "36px", borderRadius: "50%", background: "#c0392b",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: "14px", fontWeight: 600, color: "#fff", flexShrink: 0, overflow: "hidden",
+                          }}>
+                            {avatarUrl
+                              ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              : initials}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {displayName || handle || ""}
+                            </p>
+                            <p style={{ fontSize: "11px", color: "#6b5452", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {handle ? `@${handle}` : user?.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "5px" }}>
+                          <button
+                            onClick={() => { router.push(handle ? `/community/user/${handle}` : "/community"); setShowUserDrop(false); }}
+                            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s" }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                          >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
+                            View my profile
+                          </button>
+                          <button
+                            onClick={() => { router.push("/community/notifications"); setShowUserDrop(false); }}
+                            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s" }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                          >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>
+                            Notifications
+                          </button>
+                          <button
+                            onClick={() => { setShowAccountSettings(true); setShowUserDrop(false); }}
+                            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s" }}
+                            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                            onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                          >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+                            Settings
+                          </button>
+                        </div>
+
+                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "5px" }}>
+                          <button
+                            onClick={async () => {
+                              const supabase = createClient();
+                              await supabase.auth.signOut();
+                              setShowUserDrop(false);
+                              router.push("/");
+                            }}
+                            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#a89690", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s, color 0.13s" }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "rgba(192,57,43,0.12)"; e.currentTarget.style.color = "#e87060"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#a89690"; }}
+                          >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                            Log out
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   {/* Bell button + dropdown */}
                   <div ref={notifsRef} style={{ position: "relative", flexShrink: 0 }}>
@@ -411,6 +546,23 @@ export default function Navbar() {
               >
                 My Profile
               </Link>
+              <button
+                onClick={async () => {
+                  const supabase = createClient();
+                  await supabase.auth.signOut();
+                  setMobileOpen(false);
+                  router.push("/");
+                }}
+                style={{
+                  display: "block", width: "100%", marginTop: "8px",
+                  padding: "13px 16px", borderRadius: "10px",
+                  background: "rgba(192,57,43,0.12)", color: "#e87060",
+                  fontSize: "14px", fontWeight: 600,
+                  textAlign: "center", border: "none", cursor: "pointer",
+                }}
+              >
+                Log out
+              </button>
             </>
           ) : (
             <button
@@ -434,6 +586,9 @@ export default function Navbar() {
           onClose={() => setShowAuth(false)}
           onSuccess={() => setShowAuth(false)}
         />
+      )}
+      {showAccountSettings && (
+        <AccountSettingsModal onClose={() => setShowAccountSettings(false)} />
       )}
     </>
   );

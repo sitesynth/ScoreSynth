@@ -345,98 +345,100 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* User dropdown (fixed, outside sidebar so no overflow clip) */}
+      {/* User dropdown popover */}
       {userDropOpen && (
         <>
-          {/* Backdrop – catches outside clicks */}
+          {/* Backdrop */}
           <div
             style={{ position: "fixed", inset: 0, zIndex: 49 }}
             onClick={() => setUserDropOpen(false)}
           />
-          {/* Dropdown panel */}
+          {/* Compact dropdown panel */}
           <div style={{
-            position: "fixed", top: "52px", left: 0,
-            width: "280px", zIndex: 50,
-            background: "#1c1210",
-            borderRight: "1px solid rgba(255,255,255,0.07)",
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            position: "fixed", top: "58px", left: "12px",
+            width: "236px", zIndex: 50,
+            background: "#1e1412",
+            border: "1px solid rgba(255,255,255,0.09)",
+            borderRadius: "12px",
             display: "flex", flexDirection: "column",
-            padding: "20px 14px", gap: "0",
-            boxShadow: "4px 0 24px rgba(0,0,0,0.4)",
+            overflow: "hidden",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3)",
           }}>
-            {/* Avatar */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: "16px", marginBottom: "4px" }}>
+            {/* Identity header */}
+            <div style={{ padding: "14px 14px 12px", display: "flex", alignItems: "center", gap: "10px" }}>
               <div style={{
-                width: "56px", height: "56px", borderRadius: "50%", background: "#c0392b",
+                width: "38px", height: "38px", borderRadius: "50%", background: "#c0392b",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "22px", fontWeight: 600, color: "#fff", marginBottom: "10px",
+                fontSize: "15px", fontWeight: 600, color: "#fff", flexShrink: 0,
                 overflow: "hidden",
               }}>
                 {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
               </div>
-              <p style={{ fontSize: "14px", fontWeight: 500, color: "#fff", marginBottom: "3px" }}>{displayName}</p>
-              <p style={{ fontSize: "12px", color: "#6b5452" }}>{user?.email}</p>
-            </div>
-
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "10px", display: "flex", flexDirection: "column", gap: "1px" }}>
-              {[
-                {
-                  label: "Settings",
-                  onClick: () => { setSettingsTab("account"); setSettingsOpen(true); setUserDropOpen(false); },
-                  icon: <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>,
-                },
-                {
-                  label: "Admin",
-                  onClick: () => { setAdminTab("billing"); setAdminOpen(true); setUserDropOpen(false); },
-                  icon: <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
-                },
-              ].map(item => (
-                <button key={item.label} onClick={item.onClick} style={{
-                  display: "flex", alignItems: "center", gap: "10px",
-                  padding: "9px 10px", borderRadius: "8px",
-                  background: "none", border: "none", cursor: "pointer",
-                  color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left",
-                  transition: "background 0.15s",
-                }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "none")}
-                >
-                  {item.icon}{item.label}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "12px", marginTop: "8px" }}>
-              <p style={{ fontSize: "11px", color: "#6b5452", paddingLeft: "10px", marginBottom: "8px" }}>Your Community Profile</p>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 10px", borderRadius: "8px" }}>
-                <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "#c0392b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 600, color: "#fff", overflow: "hidden" }}>
-                  {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials}
-                </div>
-                <div>
-                  <p style={{ fontSize: "13px", color: "#e8dbd8" }}>{displayName}</p>
-                  <p style={{ fontSize: "11px", color: "#6b5452" }}>{handle}</p>
-                </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</p>
+                <p style={{ fontSize: "11px", color: "#6b5452", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{handle || user?.email}</p>
               </div>
             </div>
 
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "10px", marginTop: "8px" }}>
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "6px" }}>
+              {/* View Profile */}
+              <button
+                onClick={() => { router.push(`/community/${handle}`); setUserDropOpen(false); }}
+                style={{ display: "flex", alignItems: "center", gap: "9px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "none")}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" /></svg>
+                View my profile
+              </button>
+
+              {/* Settings */}
+              <button
+                onClick={() => { setSettingsTab("account"); setSettingsOpen(true); setUserDropOpen(false); }}
+                style={{ display: "flex", alignItems: "center", gap: "9px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "none")}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+                Settings
+              </button>
+
+              {/* Notifications shortcut */}
+              <button
+                onClick={() => { setSettingsTab("notifications"); setSettingsOpen(true); setUserDropOpen(false); }}
+                style={{ display: "flex", alignItems: "center", gap: "9px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "none")}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>
+                Notifications
+              </button>
+
+              {/* Admin */}
+              <button
+                onClick={() => { setAdminTab("billing"); setAdminOpen(true); setUserDropOpen(false); }}
+                style={{ display: "flex", alignItems: "center", gap: "9px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "none")}
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                Admin
+              </button>
+            </div>
+
+            {/* Log out */}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "6px" }}>
               <button
                 onClick={async () => {
                   const supabase = createClient();
                   await supabase.auth.signOut();
                   router.push("/");
                 }}
-                style={{
-                  display: "flex", alignItems: "center", gap: "10px",
-                  padding: "9px 10px", borderRadius: "8px",
-                  background: "none", border: "none", cursor: "pointer",
-                  color: "#a89690", fontSize: "13px", width: "100%", textAlign: "left",
-                  transition: "background 0.15s, color 0.15s",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#fff"; }}
+                style={{ display: "flex", alignItems: "center", gap: "9px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#a89690", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s, color 0.13s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(192,57,43,0.12)"; e.currentTarget.style.color = "#e87060"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#a89690"; }}
               >
-                <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
                 Log out
               </button>
             </div>

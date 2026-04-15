@@ -27,14 +27,13 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         transform: hovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: hovered ? "0 12px 36px rgba(0,0,0,0.45)" : "none",
         transition: "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.18s ease",
-        height: "100%",  /* stretch to fill grid cell → uniform row height */
       }}
     >
       {/* ── Image area ── */}
       {score.cover_url ? (
-        /* Real cover – 4:3, shows top of score */
+        /* Real cover – locked 4:3 box, image fills it regardless of original ratio */
         <div style={{
-          position: "relative", paddingBottom: "75%",
+          position: "relative", paddingBottom: "75%", height: 0,
           overflow: "hidden", flexShrink: 0, background: "#f5f0eb",
         }}>
           <img
@@ -77,9 +76,9 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
           </div>
         </div>
       ) : (
-        /* No cover – top of A4 portrait on dark mat */
+        /* No cover – locked 4:3 box, A4 paper peeks from top */
         <div style={{
-          position: "relative", paddingBottom: "75%", /* same as cover cards – shows top of A4 */
+          position: "relative", paddingBottom: "75%", height: 0,
           overflow: "hidden", flexShrink: 0,
           background: "#1a1210",
         }}>
@@ -154,38 +153,20 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         </div>
       )}
 
-      {/* ── Info ── */}
-      <div style={{ padding: "10px 14px 12px", display: "flex", flexDirection: "column", gap: "3px", flex: 1 }}>
+      {/* ── Info – fixed height so every card is identical ── */}
+      <div style={{
+        padding: "10px 14px 12px", flexShrink: 0,
+        height: "84px", overflow: "hidden",
+        display: "flex", flexDirection: "column",
+      }}>
         <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>
           {score.title}
         </p>
-        <p style={{ fontSize: "11px", color: "#6b5452", margin: 0 }}>
+        <p style={{ fontSize: "11px", color: "#6b5452", margin: "2px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
           {score.composer || "—"}
         </p>
 
-        {score.instruments && (score.instruments as string[]).length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "5px" }}>
-            {(score.instruments as string[]).slice(0, 3).map(inst => (
-              <span
-                key={inst}
-                onClick={e => { e.stopPropagation(); router.push(`/community?q=${encodeURIComponent(inst)}`); }}
-                style={{
-                  fontSize: "10px", padding: "2px 7px", borderRadius: "20px",
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "#a89690", cursor: "pointer", whiteSpace: "nowrap",
-                  transition: "background 0.15s, color 0.15s",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#e8dbd8"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#a89690"; }}
-              >
-                {inst}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "7px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
           <div style={{ display: "flex", gap: "12px" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
               <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">

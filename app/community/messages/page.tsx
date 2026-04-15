@@ -60,6 +60,13 @@ function MessagesInner() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
 
+  // New message compose
+  const [showCompose, setShowCompose] = useState(false);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Participant[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const supabaseRef = useRef(createClient());
@@ -68,6 +75,25 @@ function MessagesInner() {
   useEffect(() => {
     if (!authLoading && !user) router.replace("/community");
   }, [authLoading, user, router]);
+
+  // User search for compose
+  useEffect(() => {
+    if (!search.trim() || !user) { setSearchResults([]); return; }
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(async () => {
+      setSearching(true);
+      const supabase = supabaseRef.current;
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, handle, display_name, avatar_url")
+        .neq("id", user.id)
+        .or(`handle.ilike.%${search}%,display_name.ilike.%${search}%`)
+        .limit(6);
+      setSearchResults((data as Participant[]) ?? []);
+      setSearching(false);
+    }, 300);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [search, user]);
 
   useEffect(() => {
     if (user) loadConversations();
@@ -265,10 +291,90 @@ function MessagesInner() {
             display: "flex", flexDirection: "column",
             overflowY: "auto",
           }}>
-            <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: "18px", color: "#fff", fontWeight: 400 }}>
-                Messages
-              </h2>
+            <div style={{ padding: "16px 16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showCompose ? "12px" : 0 }}>
+                <h2 style={{ fontFamily: "Georgia, serif", fontSize: "18px", color: "#fff", fontWeight: 400 }}>
+                  Messages
+                </h2>
+                <button
+                  onClick={() => { setShowCompose(v => !v); setSearch(""); setSearchResults([]); }}
+                  title="New message"
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: "30px", height: "30px", borderRadius: "8px",
+                    background: showCompose ? "rgba(255,255,255,0.1)" : "transparent",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    color: "#a89690", cursor: "pointer", transition: "all 0.15s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = showCompose ? "rgba(255,255,255,0.1)" : "transparent"; e.currentTarget.style.color = "#a89690"; }}
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Compose: search for a user */}
+              {showCompose && (
+                <div style={{ position: "relative" }}>
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search by name or handle…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{
+                      width: "100%", padding: "8px 12px", borderRadius: "8px",
+                      background: "#1e1513", border: "1px solid rgba(255,255,255,0.12)",
+                      color: "#fff", fontSize: "12px", outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  {(searchResults.length > 0 || searching) && (
+                    <div style={{
+                      position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0,
+                      background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "10px", overflow: "hidden",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)", zIndex: 50,
+                    }}>
+                      {searching && !searchResults.length ? (
+                        <div style={{ padding: "12px 14px", fontSize: "12px", color: "#6b5452" }}>Searching…</div>
+                      ) : (
+                        searchResults.map(p => (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              setShowCompose(false);
+                              setSearch("");
+                              setSearchResults([]);
+                              openOrCreateConv(p);
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "10px",
+                              width: "100%", padding: "10px 14px",
+                              background: "none", border: "none",
+                              borderBottom: "1px solid rgba(255,255,255,0.05)",
+                              cursor: "pointer", textAlign: "left",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "none"}
+                          >
+                            <Avatar user={p} size={30} />
+                            <div>
+                              <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8" }}>
+                                {p.display_name || p.handle}
+                              </p>
+                              <p style={{ fontSize: "11px", color: "#6b5452" }}>@{p.handle}</p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {loadingConvs ? (

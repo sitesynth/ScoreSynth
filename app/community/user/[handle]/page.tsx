@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 import type { Profile, Score } from "@/lib/supabase/types";
 import AvatarCropper from "@/components/community/AvatarCropper";
+import MessageModal from "@/components/community/MessageModal";
 
 // ─── Inline editable field (owner only) ────────────────────────────────────
 function InlineField({
@@ -227,6 +228,7 @@ export default function PublicUserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
   const [editingScore, setEditingScore] = useState<Score | null>(null);
 
   // Inline edit state (owner only)
@@ -241,19 +243,32 @@ export default function PublicUserProfilePage() {
   const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(null);
   const [showBannerPicker, setShowBannerPicker] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
-  const [profileDirty, setProfileDirty] = useState(false);
-  const [savingProfile, setSavingProfile] = useState(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarHover, setAvatarHover] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [newCollName, setNewCollName] = useState("");
   const [addingColl, setAddingColl] = useState(false);
 
-  // Mark profile dirty whenever edit fields change (but not on initial load)
   const initializedRef = useRef(false);
+
+  // Auto-save text fields with debounce
   useEffect(() => {
-    if (!initializedRef.current) return;
-    setProfileDirty(true);
+    if (!initializedRef.current || !currentUser) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      const supabase = createClient();
+      await supabase.from("profiles").update({
+        display_name: displayName.trim() || profileUser?.handle,
+        bio: bio.trim(),
+        location: location.trim(),
+        website: website.trim(),
+        twitter: twitter.trim(),
+        instagram: instagram.trim(),
+      }).eq("id", currentUser.id);
+    }, 1200);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayName, bio, location, website, twitter, instagram]);
 
   useEffect(() => {
@@ -346,21 +361,10 @@ export default function PublicUserProfilePage() {
     }
   };
 
-  const handleSaveProfile = async () => {
+  const saveBannerImmediate = async (gradient: string, imageUrl: string | null) => {
     if (!currentUser) return;
-    setSavingProfile(true);
     const supabase = createClient();
-    const updates = {
-      display_name: displayName.trim() || profileUser?.handle,
-      bio: bio.trim(), location: location.trim(),
-      website: website.trim(), twitter: twitter.trim(), instagram: instagram.trim(),
-      banner_gradient: bannerGradient,
-      banner_url: bannerImageUrl,
-    };
-    const { data } = await supabase.from("profiles").update(updates).eq("id", currentUser.id).select().single();
-    if (data) setProfileUser(data as Profile);
-    setSavingProfile(false);
-    setProfileDirty(false);
+    await supabase.from("profiles").update({ banner_gradient: gradient, banner_url: imageUrl }).eq("id", currentUser.id);
   };
 
   const handleBannerUpload = async (file: File) => {
@@ -373,8 +377,8 @@ export default function PublicUserProfilePage() {
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = `${data.publicUrl}?t=${Date.now()}`;
     setBannerImageUrl(url);
-    setProfileDirty(true);
     setShowBannerPicker(false);
+    saveBannerImmediate(bannerGradient, url);
   };
 
   const handleAvatarUpload = async (file: File) => {
@@ -478,7 +482,7 @@ export default function PublicUserProfilePage() {
                       {/* Gradient swatches */}
                       {BANNER_GRADIENTS.map((g, i) => (
                         <div key={i}
-                          onClick={() => { setBannerGradient(g); setBannerImageUrl(null); setShowBannerPicker(false); setProfileDirty(true); }}
+                          onClick={() => { setBannerGradient(g); setBannerImageUrl(null); setShowBannerPicker(false); saveBannerImmediate(g, null); }}
                           style={{
                             width: "28px", height: "28px", borderRadius: "6px", background: g,
                             cursor: "pointer",
@@ -510,7 +514,7 @@ export default function PublicUserProfilePage() {
                       </button>
                       {bannerImageUrl && (
                         <button
-                          onClick={() => { setBannerImageUrl(null); setProfileDirty(true); setShowBannerPicker(false); }}
+                          onClick={() => { setBannerImageUrl(null); setShowBannerPicker(false); saveBannerImmediate(bannerGradient, null); }}
                           style={{
                             padding: "5px 8px", borderRadius: "6px",
                             background: "rgba(192,57,43,0.2)", border: "1px solid rgba(192,57,43,0.3)",
@@ -569,19 +573,19 @@ export default function PublicUserProfilePage() {
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                   {isOwner ? (
                     <>
-                      {profileDirty && (
-                        <button
-                          onClick={handleSaveProfile}
-                          disabled={savingProfile}
-                          style={{
-                            padding: "8px 18px", borderRadius: "8px", fontSize: "13px", fontWeight: 600,
-                            cursor: "pointer", background: "#fff", color: "#211817", border: "none",
-                            opacity: savingProfile ? 0.7 : 1,
-                          }}
-                        >
-                          {savingProfile ? "Saving…" : "Save profile"}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => router.push("/community/messages")}
+                        style={{
+                          padding: "8px 18px", borderRadius: "8px", fontSize: "13px", fontWeight: 500,
+                          cursor: "pointer", background: "none", border: "1px solid rgba(255,255,255,0.15)",
+                          color: "#a89690", display: "flex", alignItems: "center", gap: "6px",
+                        }}
+                      >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                        </svg>
+                        My messages
+                      </button>
                       <button
                         onClick={() => setShowUploadModal(true)}
                         style={{
@@ -603,7 +607,7 @@ export default function PublicUserProfilePage() {
                       <button
                         onClick={() => {
                           if (!currentUser) { setShowAuthModal(true); return; }
-                          router.push(`/community/messages?with=${profileUser.handle}`);
+                          setShowMessageModal(true);
                         }}
                         style={{
                           padding: "8px 18px", borderRadius: "8px", fontSize: "13px", fontWeight: 500,
@@ -873,6 +877,18 @@ export default function PublicUserProfilePage() {
           imageSrc={cropSrc}
           onConfirm={handleCropConfirm}
           onCancel={() => { setCropSrc(null); if (avatarInputRef.current) avatarInputRef.current.value = ""; }}
+        />
+      )}
+      {showMessageModal && currentUser && profileUser && (
+        <MessageModal
+          currentUserId={currentUser.id}
+          recipient={{
+            id: profileUser.id,
+            handle: profileUser.handle,
+            display_name: profileUser.display_name ?? null,
+            avatar_url: avatarUrl,
+          }}
+          onClose={() => setShowMessageModal(false)}
         />
       )}
     </>

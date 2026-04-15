@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/supabase/useAuth";
-import { useNotifications } from "@/lib/supabase/useNotifications";
+import { useNotifications, NotificationItem } from "@/lib/supabase/useNotifications";
 import AuthModal from "@/components/community/AuthModal";
 
 const navLinks = [
@@ -15,11 +16,59 @@ const navLinks = [
   { label: "Music Scores", href: "/community" },
 ];
 
+function notifHref(n: NotificationItem): string {
+  switch (n.type) {
+    case "welcome":
+      return "/community/messages?with=mayyascoresynth";
+    case "message":
+      return n.actor_handle
+        ? `/community/messages?with=${n.actor_handle}`
+        : "/community/messages";
+    case "like":
+    case "comment":
+      return n.score_id
+        ? `/community/${n.score_id}`
+        : "/community/notifications";
+    case "follow":
+    default:
+      return "/community/notifications";
+  }
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const router = useRouter();
   const { user, handle, loading } = useAuth();
-  const unreadCount = useNotifications(user?.id ?? null);
+  const { unreadCount, items, markRead, markAllRead } = useNotifications(user?.id ?? null);
+  const notifsRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showNotifs) return;
+    const handler = (e: MouseEvent) => {
+      if (notifsRef.current && !notifsRef.current.contains(e.target as Node)) {
+        setShowNotifs(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showNotifs]);
+
+  const previewItems = items.slice(0, 5);
 
   return (
     <>
@@ -96,33 +145,156 @@ export default function Navbar() {
                   >
                     My Profile
                   </Link>
-                  <Link
-                    href="/community/notifications"
-                    title="Notifications"
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      width: "32px", height: "32px", borderRadius: "8px",
-                      background: "transparent", border: "none",
-                      color: "#fff", textDecoration: "none",
-                      transition: "all 0.15s", flexShrink: 0,
-                      position: "relative",
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                  >
-                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                      <path d="M13.73 21a2 2 0 01-3.46 0"/>
-                    </svg>
-                    {unreadCount > 0 && (
-                      <span style={{
-                        position: "absolute", top: "-2px", right: "-2px",
-                        width: "8px", height: "8px", borderRadius: "50%",
-                        background: "#c0392b",
-                        border: "1.5px solid #211817",
-                      }} />
+
+                  {/* Bell button + dropdown */}
+                  <div ref={notifsRef} style={{ position: "relative", flexShrink: 0 }}>
+                    <button
+                      onClick={() => setShowNotifs(v => !v)}
+                      title="Notifications"
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        width: "32px", height: "32px", borderRadius: "8px",
+                        background: showNotifs ? "rgba(255,255,255,0.07)" : "transparent",
+                        border: "1px solid rgba(255,255,255,0.24)", color: "#e8dbd8", cursor: "pointer",
+                        transition: "background 0.15s, border-color 0.15s, color 0.15s", position: "relative",
+                        padding: 0,
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)";
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.42)";
+                        e.currentTarget.style.color = "#fff";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.backgroundColor = showNotifs ? "rgba(255,255,255,0.07)" : "transparent";
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.24)";
+                        e.currentTarget.style.color = "#e8dbd8";
+                      }}
+                    >
+                      <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 01-3.46 0"/>
+                      </svg>
+                      {unreadCount > 0 && (
+                        <span style={{
+                          position: "absolute", top: "-2px", right: "-2px",
+                          width: "8px", height: "8px", borderRadius: "50%",
+                          background: "#c0392b",
+                          border: "1.5px solid #211817",
+                        }} />
+                      )}
+                    </button>
+
+                    {/* Dropdown */}
+                    {showNotifs && (
+                      <div style={{
+                        position: "absolute", top: "calc(100% + 10px)", right: 0,
+                        width: "340px",
+                        background: "#2a1f1e",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "14px",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                        overflow: "hidden",
+                        zIndex: 200,
+                      }}>
+                        {/* Header */}
+                        <div style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "14px 16px",
+                          borderBottom: "1px solid rgba(255,255,255,0.07)",
+                        }}>
+                          <span style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>Notifications</span>
+                          {unreadCount > 0 && (
+                            <button
+                              onClick={markAllRead}
+                              style={{
+                                fontSize: "11px", color: "#a89690", background: "none",
+                                border: "none", cursor: "pointer", padding: "2px 0",
+                              }}
+                            >
+                              Mark all read
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Items */}
+                        {previewItems.length === 0 ? (
+                          <div style={{ padding: "28px 16px", textAlign: "center", fontSize: "13px", color: "#6b5452" }}>
+                            No notifications yet
+                          </div>
+                        ) : (
+                          <div>
+                            {previewItems.map(n => (
+                              <div
+                                key={n.id}
+                                onClick={() => {
+                                  markRead(n.id);
+                                  setShowNotifs(false);
+                                  router.push(notifHref(n));
+                                }}
+                                style={{
+                                  display: "flex", gap: "10px", alignItems: "flex-start",
+                                  padding: "12px 16px",
+                                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                                  background: n.read ? "transparent" : "rgba(192,57,43,0.07)",
+                                  cursor: "pointer",
+                                  transition: "background 0.15s",
+                                }}
+                              >
+                                {/* Unread dot */}
+                                <div style={{
+                                  marginTop: "5px", flexShrink: 0,
+                                  width: "6px", height: "6px", borderRadius: "50%",
+                                  background: n.read ? "transparent" : "#c0392b",
+                                }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{
+                                    fontSize: "12px", fontWeight: n.read ? 400 : 600,
+                                    color: n.read ? "#a89690" : "#fff",
+                                    marginBottom: "2px",
+                                  }}>
+                                    {n.title}
+                                  </div>
+                                  {(n.type === "welcome" || n.type === "message") && (
+                                    <div style={{ fontSize: "10px", color: "#c0392b", marginBottom: "3px", fontWeight: 500 }}>
+                                      @mayyascoresynth
+                                    </div>
+                                  )}
+                                  <div style={{
+                                    fontSize: "11px", color: "#6b5452",
+                                    lineHeight: 1.5,
+                                    overflow: "hidden",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                  }}>
+                                    {n.body}
+                                  </div>
+                                  <div style={{ fontSize: "10px", color: "#4a3432", marginTop: "4px" }}>
+                                    {timeAgo(n.created_at)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Footer */}
+                        <Link
+                          href="/community/notifications"
+                          onClick={() => setShowNotifs(false)}
+                          style={{
+                            display: "block", textAlign: "center",
+                            padding: "12px 16px",
+                            fontSize: "12px", color: "#a89690",
+                            textDecoration: "none",
+                            borderTop: "1px solid rgba(255,255,255,0.07)",
+                          }}
+                        >
+                          View all notifications →
+                        </Link>
+                      </div>
                     )}
-                  </Link>
+                  </div>
                 </>
               ) : (
                 <button

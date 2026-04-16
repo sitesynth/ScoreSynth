@@ -956,10 +956,10 @@ export default function PublicUserProfilePage() {
                           ? userScores.filter(s => !s.resource_collection_id)
                           : userScores.filter(s => s.resource_collection_id === activeResourceColl);
                         return visible.length > 0 ? (
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", gridAutoRows: "clamp(320px, 30vw, 420px)" }}
                             onClick={() => resourceScoreMenuId && setResourceScoreMenuId(null)}>
                             {visible.map(s => (
-                              <div key={s.id} style={{ position: "relative" }}>
+                              <div key={s.id} style={{ position: "relative", display: "flex", height: "100%" }}>
                                 <ScoreCard score={s} isOwner={isOwner} onEdit={setEditingScore} />
                                 {isOwner && (
                                   <div style={{ position: "absolute", top: "8px", right: "8px", zIndex: 10 }}>
@@ -1144,10 +1144,10 @@ export default function PublicUserProfilePage() {
                       {/* Scores inside a collection */}
                       {activeCollection !== null && (
                         visibleSaved.length > 0 ? (
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", gridAutoRows: "clamp(320px, 30vw, 420px)" }}
                             onClick={() => savedScoreMenuId && setSavedScoreMenuId(null)}>
                             {visibleSaved.map(s => (
-                              <div key={s.id} style={{ position: "relative" }}>
+                              <div key={s.id} style={{ position: "relative", display: "flex", height: "100%" }}>
                                 <ScoreCard score={s} />
                                 {isOwner && (
                                   <div style={{ position: "absolute", top: "8px", right: "8px", zIndex: 10 }}>

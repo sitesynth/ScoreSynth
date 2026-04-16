@@ -422,6 +422,85 @@ export default function ScoreDetailPage() {
                     Download PDF
                   </button>
 
+                  {/* ── Instrument Parts ── */}
+                  {score.parts && score.parts.length > 0 && (
+                    <div style={{
+                      marginTop: "4px", padding: "14px 16px", borderRadius: "12px",
+                      background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                        <p style={{ fontSize: "12px", fontWeight: 500, color: "#e8dbd8", margin: 0 }}>
+                          Instrument Parts
+                          <span style={{
+                            marginLeft: "7px", fontSize: "10px", padding: "2px 6px",
+                            borderRadius: "4px", background: "rgba(107,143,189,0.15)",
+                            color: "#6b8fbd", border: "1px solid rgba(107,143,189,0.25)",
+                            fontWeight: 400,
+                          }}>
+                            {score.parts.length}
+                          </span>
+                        </p>
+                        <button
+                          onClick={async () => {
+                            if (!isLoggedIn) { setAuthIntent("download"); setShowAuthModal(true); return; }
+                            const supabase = createClient();
+                            for (const part of score.parts) {
+                              const { data } = await supabase.storage.from("score-files").createSignedUrl(part.pdf_url, 3600);
+                              if (data?.signedUrl) {
+                                const a = document.createElement("a");
+                                a.href = data.signedUrl;
+                                a.download = `${part.name}.pdf`;
+                                a.click();
+                                await new Promise(r => setTimeout(r, 400));
+                              }
+                            }
+                          }}
+                          style={{
+                            fontSize: "11px", padding: "4px 10px", borderRadius: "6px",
+                            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)",
+                            color: "#a89690", cursor: "pointer", whiteSpace: "nowrap",
+                          }}
+                        >
+                          Download all
+                        </button>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {score.parts.map((part, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "7px", minWidth: 0 }}>
+                              <svg width="12" height="12" fill="none" stroke="#6b5452" strokeWidth="2" viewBox="0 0 24 24">
+                                <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                              </svg>
+                              <span style={{ fontSize: "12px", color: "#a89690", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {part.name}
+                              </span>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                if (!isLoggedIn) { setAuthIntent("download"); setShowAuthModal(true); return; }
+                                const supabase = createClient();
+                                const { data } = await supabase.storage.from("score-files").createSignedUrl(part.pdf_url, 3600);
+                                if (data?.signedUrl) {
+                                  const a = document.createElement("a");
+                                  a.href = data.signedUrl;
+                                  a.download = `${part.name}.pdf`;
+                                  a.click();
+                                }
+                              }}
+                              style={{
+                                flexShrink: 0, fontSize: "11px", padding: "3px 9px", borderRadius: "5px",
+                                background: "none", border: "1px solid rgba(255,255,255,0.1)",
+                                color: "#6b8fbd", cursor: "pointer",
+                              }}
+                            >
+                              ↓ PDF
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <Link href="/app" style={{
                     width: "100%", padding: "11px", borderRadius: "10px",
                     background: "transparent", border: "1px solid rgba(255,255,255,0.1)",

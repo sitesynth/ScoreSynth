@@ -29,6 +29,8 @@ export type Score = {
   pdf_url: string | null;
   midi_url: string | null;
   cover_url: string | null;
+  resource_collection_id: string | null;
+  parts: { name: string; pdf_url: string }[];
   author_id: string;
   created_at: string;
   updated_at: string;

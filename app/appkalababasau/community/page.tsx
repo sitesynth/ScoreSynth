@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/supabase/useAuth";
 import type { Score, Profile } from "@/lib/supabase/types";
 import { SCORE_TAGS } from "@/lib/scores";
 import UploadScoreModal from "@/components/community/UploadScoreModal";
+import ScoreCard from "@/components/community/ScoreCard";
 
 const BANNER_GRADIENTS = [
   "linear-gradient(135deg, #7a2318 0%, #c0392b 60%, #8b2c1e 100%)",
@@ -336,64 +337,6 @@ function CollectionCard({ coll, onClick }: { coll: Collection; onClick: () => vo
         <p style={{ fontSize: "11px", color: "#6b5452" }}>{coll.count} {coll.count === 1 ? "score" : "scores"}</p>
       </div>
     </div>
-  );
-}
-
-function ScoreCard({ score }: { score: Score }) {
-  const [hovered, setHovered] = useState(false);
-  const handle = score.profiles?.handle ?? "";
-  return (
-    <Link href={`/community/${score.id}`} style={{ textDecoration: "none" }}>
-      <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          borderRadius: "12px", overflow: "hidden",
-          background: "#1e1513",
-          border: `1px solid ${hovered ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)"}`,
-          transform: hovered ? "translateY(-3px)" : "translateY(0)",
-          boxShadow: hovered ? "0 8px 32px rgba(0,0,0,0.4)" : "none",
-          transition: "all 0.2s ease", cursor: "pointer",
-          display: "flex", flexDirection: "column",
-        }}
-      >
-        <div style={{ background: "#f5f0eb", aspectRatio: "4/3", position: "relative", overflow: "hidden", flexShrink: 0 }}>
-          <Image src="/scoreimagedefaultpreview.png" alt={score.title} fill style={{ objectFit: "cover" }} />
-          {hovered && (
-            <div style={{ position: "absolute", inset: 0, background: "rgba(33,24,23,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: "13px", fontWeight: 500, color: "#fff", padding: "8px 18px", borderRadius: "20px", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.2)" }}>View score</span>
-            </div>
-          )}
-        </div>
-        <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{score.title}</p>
-          <Link
-            href={`/community/user/${handle}`}
-            onClick={e => e.stopPropagation()}
-            style={{ fontSize: "11px", color: "#6b5452", textDecoration: "none", transition: "color 0.15s" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#a89690")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#6b5452")}
-          >
-            @{handle}
-          </Link>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
-                <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-                {score.likes_count.toLocaleString()}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                {score.views_count.toLocaleString()}
-              </span>
-            </div>
-            <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.06)", color: "#a89690" }}>
-              {score.tag === "free" ? "Free" : score.price_display ?? "Premium"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
   );
 }
 

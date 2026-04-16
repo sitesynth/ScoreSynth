@@ -8,7 +8,12 @@
       "Bash(npx create-next-app@latest scoresynth-app --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
       "mcp__Claude_Preview__preview_start",
       "Bash(cmd /c \"taskkill /IM node.exe /F\")",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(npm run:*)",
+      "Bash(Start-Sleep -Seconds 8)",
+      "Bash(Get-Content \"C:\\\\Users\\\\mayya\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-mayya-Desktop-SITES-ScoreSynth\\\\a3ef2790-9ea2-4f78-900d-1d272409ce2f\\\\tasks\\\\bbarieqwv.output\" -Tail 20)"
     ]
   }
 }

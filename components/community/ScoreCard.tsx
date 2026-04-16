@@ -137,7 +137,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
           display: "flex", alignItems: "center", justifyContent: "space-between",
           marginTop: "auto",
         }}>
-          <div style={{ display: "flex", gap: "12px" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
               <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
@@ -151,14 +151,25 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
               {score.views_count.toLocaleString()}
             </span>
           </div>
-          <span style={{
-            fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
-            background: score.tag === "free" ? "rgba(111,207,151,0.1)" : "rgba(255,255,255,0.06)",
-            color: score.tag === "free" ? "#6fcf97" : "#a89690",
-            border: `1px solid ${score.tag === "free" ? "rgba(111,207,151,0.2)" : "transparent"}`,
-          }}>
-            {score.tag === "free" ? "Free" : score.price_display ?? "Premium"}
-          </span>
+          <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+            {score.parts && score.parts.length > 0 && (
+              <span style={{
+                fontSize: "10px", padding: "2px 6px", borderRadius: "4px",
+                background: "rgba(107,143,189,0.12)", color: "#6b8fbd",
+                border: "1px solid rgba(107,143,189,0.22)",
+              }}>
+                Parts
+              </span>
+            )}
+            <span style={{
+              fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
+              background: score.tag === "free" ? "rgba(111,207,151,0.1)" : "rgba(255,255,255,0.06)",
+              color: score.tag === "free" ? "#6fcf97" : "#a89690",
+              border: `1px solid ${score.tag === "free" ? "rgba(111,207,151,0.2)" : "transparent"}`,
+            }}>
+              {score.tag === "free" ? "Free" : score.price_display ?? "Premium"}
+            </span>
+          </div>
         </div>
       </div>
     </div>

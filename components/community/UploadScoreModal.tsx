@@ -4,6 +4,29 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 
+async function generatePdfThumbnail(file: File): Promise<Blob | null> {
+  try {
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      "pdfjs-dist/build/pdf.worker.mjs",
+      import.meta.url
+    ).toString();
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d")!;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+    return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.88));
+  } catch {
+    return null;
+  }
+}
+
 const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "chamber", "symphonic", "guitar", "choir", "percussion", "soundtracks"];
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
@@ -122,11 +145,13 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
       return;
     }
 
-    // Upload cover image
+    // Upload cover image (or auto-generate from PDF first page)
     let coverUrl: string | null = null;
-    if (coverFile) {
-      const coverPath = `${user.id}/${Date.now()}-${coverFile.name}`;
-      const { error: coverErr } = await supabase.storage.from("avatars").upload(coverPath, coverFile);
+    const coverSource = coverFile ?? await generatePdfThumbnail(pdfFile);
+    if (coverSource) {
+      const ext = coverFile ? coverFile.name.split(".").pop() : "jpg";
+      const coverPath = `${user.id}/${Date.now()}-cover.${ext}`;
+      const { error: coverErr } = await supabase.storage.from("avatars").upload(coverPath, coverSource);
       if (!coverErr) {
         const { data } = supabase.storage.from("avatars").getPublicUrl(coverPath);
         coverUrl = data.publicUrl;

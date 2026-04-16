@@ -24,8 +24,10 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         minWidth: 0,
         display: "flex",
         flexDirection: "column",
-        height: "clamp(320px, 30vw, 420px)",
-        borderRadius: "12px", overflow: "hidden",
+        /* ── Total card height is fixed → every card identical ── */
+        height: "clamp(280px, 28vw, 380px)",
+        borderRadius: "12px",
+        overflow: "hidden",
         background: "#1e1513",
         border: `1px solid ${hovered ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.07)"}`,
         transform: hovered ? "translateY(-4px)" : "translateY(0)",
@@ -33,15 +35,12 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         transition: "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.18s ease",
       }}
     >
-      {/* ── Image area ── */}
-      {/* ── Image – always 4:3 via aspectRatio, never expands ── */}
+      {/* ── Image – flex:1 fills all space above the info bar ── */}
       <div style={{
         flex: 1,
         minHeight: 0,
-        width: "100%",
-        overflow: "hidden",
-        flexShrink: 0,
         position: "relative",
+        overflow: "hidden",
         background: score.cover_url ? "#f5f0eb" : "#1a1210",
       }}>
         {score.cover_url ? (
@@ -49,22 +48,23 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
             src={score.cover_url}
             alt={score.title}
             style={{
+              position: "absolute", inset: 0,
               width: "100%", height: "100%",
               objectFit: "cover", objectPosition: "top center",
               display: "block",
             }}
           />
         ) : (
-          /* A4 paper peeking from the top */
+          /* A4 paper peeking from top on dark mat */
           <div style={{
             position: "absolute",
-            top: "6%", left: "12%", right: "12%", bottom: "-80%",
+            top: "6%", left: "12%", right: "12%", bottom: "-60%",
             background: "#faf8f5",
             boxShadow: hovered ? "0 10px 32px rgba(0,0,0,0.6)" : "0 5px 18px rgba(0,0,0,0.45)",
             transform: hovered ? "scale(1.03)" : "scale(1)",
             transition: "transform 0.3s ease, box-shadow 0.3s ease",
             display: "flex", flexDirection: "column", alignItems: "center",
-            paddingTop: "12%",
+            paddingTop: "14%",
           }}>
             <svg width="18" height="32" viewBox="0 0 20 36" fill="none" style={{ opacity: 0.12, marginBottom: "6%" }}>
               <path d="M10 1 C10 1 4 9 4 17 C4 24 8 27 10 29 C12 31 14 33 14 36" stroke="#1a1210" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
@@ -79,16 +79,16 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         {/* Hover overlay */}
         <div style={{
           position: "absolute", inset: 0,
-          background: score.cover_url ? "rgba(22,16,15,0.45)" : "transparent",
+          background: score.cover_url ? "rgba(22,16,15,0.45)" : "rgba(22,16,15,0.2)",
           display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
           opacity: hovered ? 1 : 0, transition: "opacity 0.18s ease", zIndex: 2,
         }}>
           <span style={{
             fontSize: "12px", fontWeight: 600, color: "#fff",
             padding: "7px 18px", borderRadius: "20px",
-            background: score.cover_url ? "rgba(255,255,255,0.15)" : "rgba(22,16,15,0.7)",
+            background: "rgba(255,255,255,0.15)",
             backdropFilter: "blur(8px)",
-            border: `1px solid ${score.cover_url ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.18)"}`,
+            border: "1px solid rgba(255,255,255,0.22)",
           }}>View score</span>
           {isOwner && onEdit && (
             <span
@@ -106,20 +106,34 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         </div>
       </div>
 
-      {/* ── Info – fixed height so every card is identical ── */}
+      {/* ── Info – fixed height, always the same ── */}
       <div style={{
-        padding: "10px 14px 12px", flexShrink: 0,
-        height: "92px", overflow: "hidden",
-        display: "flex", flexDirection: "column",
+        flexShrink: 0,
+        height: "80px",
+        padding: "10px 14px 12px",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
       }}>
-        <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: 0 }}>
+        <p style={{
+          fontSize: "13px", fontWeight: 500, color: "#e8dbd8",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          margin: 0,
+        }}>
           {score.title}
         </p>
-        <p style={{ fontSize: "11px", color: "#6b5452", margin: "2px 0 0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <p style={{
+          fontSize: "11px", color: "#6b5452",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          margin: "2px 0 0",
+        }}>
           {score.composer || "—"}
         </p>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginTop: "auto",
+        }}>
           <div style={{ display: "flex", gap: "12px" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
               <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">

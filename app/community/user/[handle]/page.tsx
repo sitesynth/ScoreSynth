@@ -528,6 +528,20 @@ export default function PublicUserProfilePage() {
     setMovingResourceScore(null);
   };
 
+  const [deletingScore, setDeletingScore] = useState<Score | null>(null);
+
+  const handleDeleteScore = async () => {
+    if (!currentUser || !deletingScore) return;
+    const supabase = createClient();
+    await supabase.from("scores").delete().eq("id", deletingScore.id).eq("author_id", currentUser.id);
+    setUserScores(prev => prev.filter(s => s.id !== deletingScore.id));
+    setResourceColls(prev => prev.map(c => {
+      const collScores = userScores.filter(s => s.id !== deletingScore.id && s.resource_collection_id === c.id);
+      return { ...c, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
+    }));
+    setDeletingScore(null);
+  };
+
   const handleRemoveFromSaved = async (scoreId: string) => {
     if (!currentUser) return;
     const supabase = createClient();
@@ -1006,6 +1020,16 @@ export default function PublicUserProfilePage() {
                                           <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                           Edit score
                                         </button>
+                                        <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
+                                        <button
+                                          onClick={() => { setResourceScoreMenuId(null); setDeletingScore(s); }}
+                                          style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 10px", background: "none", border: "none", color: "#c0392b", fontSize: "13px", cursor: "pointer", borderRadius: "6px" }}
+                                          onMouseEnter={e => e.currentTarget.style.background = "rgba(192,57,43,0.12)"}
+                                          onMouseLeave={e => e.currentTarget.style.background = "none"}
+                                        >
+                                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                                          Delete score
+                                        </button>
                                       </div>
                                     )}
                                   </div>
@@ -1058,6 +1082,49 @@ export default function PublicUserProfilePage() {
                           </div>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Delete score confirmation */}
+                  {deletingScore && (
+                    <div
+                      onClick={() => setDeletingScore(null)}
+                      style={{ position: "fixed", inset: 0, zIndex: 110, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <div onClick={e => e.stopPropagation()} style={{
+                        background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "16px", padding: "28px 24px", maxWidth: "360px", width: "100%",
+                        boxShadow: "0 20px 60px rgba(0,0,0,0.7)",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                          <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(192,57,43,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="16" height="16" fill="none" stroke="#c0392b" strokeWidth="2" viewBox="0 0 24 24">
+                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <p style={{ fontSize: "14px", fontWeight: 600, color: "#fff", margin: 0 }}>Delete score?</p>
+                            <p style={{ fontSize: "12px", color: "#6b5452", margin: "2px 0 0" }}>This action cannot be undone</p>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: "13px", color: "#c8b8b6", margin: "0 0 20px", lineHeight: 1.5 }}>
+                          Are you sure you want to delete <strong style={{ color: "#e8dbd8" }}>&ldquo;{deletingScore.title}&rdquo;</strong>? The PDF and all associated files will be permanently removed.
+                        </p>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            onClick={() => setDeletingScore(null)}
+                            style={{ flex: 1, padding: "9px", borderRadius: "9px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#c8b8b6", fontSize: "13px", cursor: "pointer" }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleDeleteScore}
+                            style={{ flex: 1, padding: "9px", borderRadius: "9px", background: "#c0392b", border: "none", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
 

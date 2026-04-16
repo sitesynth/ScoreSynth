@@ -73,7 +73,7 @@ function InlineField({
 }
 
 // ─── Collection card (Pinterest style) ──────────────────────────────────────
-type Collection = { id: string; name: string; count: number; covers: (string | null)[] };
+type Collection = { id: string; name: string; count: number; covers: (string | null)[]; parent_id: string | null };
 
 function CollectionCard({ coll, onClick, isOwner, onDelete, onRename }: {
   coll: Collection;
@@ -340,11 +340,11 @@ export default function PublicUserProfilePage() {
 
       // Load resource collections
       const { data: rcollData } = await supabase.from("resource_collections")
-        .select("id, name").eq("user_id", p.id).order("created_at");
-      const rawRcolls = (rcollData ?? []) as { id: string; name: string }[];
+        .select("id, name, parent_id").eq("user_id", p.id).order("created_at");
+      const rawRcolls = (rcollData ?? []) as { id: string; name: string; parent_id: string | null }[];
       const rcolls: Collection[] = rawRcolls.map(c => {
         const collScores = scores.filter(s => s.resource_collection_id === c.id);
-        return { id: c.id, name: c.name, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
+        return { id: c.id, name: c.name, parent_id: c.parent_id ?? null, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
       });
       setResourceColls(rcolls);
 
@@ -368,6 +368,7 @@ export default function PublicUserProfilePage() {
         return {
           id: c.id,
           name: c.name,
+          parent_id: null,
           count: idxs.length,
           covers: idxs.slice(0, 4).map(i => savedScores[i]?.cover_url ?? null),
         };
@@ -452,7 +453,7 @@ export default function PublicUserProfilePage() {
       .insert({ user_id: currentUser.id, name: newCollName.trim() })
       .select("id, name").single();
     if (data) {
-      setCollections(prev => [...prev, { id: data.id, name: data.name, count: 0, covers: [] }]);
+      setCollections(prev => [...prev, { id: data.id, name: data.name, parent_id: null, count: 0, covers: [] }]);
       setNewCollName("");
     }
     setAddingColl(false);
@@ -490,11 +491,12 @@ export default function PublicUserProfilePage() {
     if (!newRcollName.trim() || !currentUser) return;
     setAddingRcoll(true);
     const supabase = createClient();
+    const parentId = (activeResourceColl && activeResourceColl !== "all" && activeResourceColl !== "unsorted") ? activeResourceColl : null;
     const { data } = await supabase.from("resource_collections")
-      .insert({ user_id: currentUser.id, name: newRcollName.trim() })
-      .select("id, name").single();
+      .insert({ user_id: currentUser.id, name: newRcollName.trim(), parent_id: parentId })
+      .select("id, name, parent_id").single();
     if (data) {
-      setResourceColls(prev => [...prev, { id: data.id, name: data.name, count: 0, covers: [] }]);
+      setResourceColls(prev => [...prev, { id: data.id, name: data.name, parent_id: data.parent_id ?? null, count: 0, covers: [] }]);
       setNewRcollName("");
     }
     setAddingRcoll(false);
@@ -882,19 +884,31 @@ export default function PublicUserProfilePage() {
                   {activeTab === "resources" && (
                     <div>
                       {/* Breadcrumb when inside a collection */}
-                      {activeResourceColl !== null && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-                          <button onClick={() => setActiveResourceColl(null)}
-                            style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
-                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
-                            Collections
-                          </button>
-                          <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
-                          <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
-                            {activeResourceColl === "all" ? "All resources" : resourceColls.find(c => c.id === activeResourceColl)?.name}
-                          </span>
-                        </div>
-                      )}
+                      {activeResourceColl !== null && (() => {
+                        const currentColl = resourceColls.find(c => c.id === activeResourceColl);
+                        const parentColl = currentColl?.parent_id ? resourceColls.find(c => c.id === currentColl.parent_id) : null;
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                            <button onClick={() => {
+                              setActiveResourceColl(currentColl?.parent_id ?? null);
+                            }}
+                              style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
+                              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
+                              {parentColl ? parentColl.name : "Collections"}
+                            </button>
+                            {parentColl && (
+                              <>
+                                <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
+                                <span style={{ fontSize: "13px", color: "#6b5452" }}>Collections</span>
+                              </>
+                            )}
+                            <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
+                            <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
+                              {activeResourceColl === "all" ? "All resources" : activeResourceColl === "unsorted" ? "Unsorted" : currentColl?.name}
+                            </span>
+                          </div>
+                        );
+                      })()}
 
                       {/* Collection overview */}
                       {activeResourceColl === null && (
@@ -905,11 +919,11 @@ export default function PublicUserProfilePage() {
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
                               {/* "All resources" card */}
                               <CollectionCard
-                                coll={{ id: "all", name: "All resources", count: userScores.length, covers: userScores.slice(0, 4).map(s => s.cover_url ?? null) }}
+                                coll={{ id: "all", name: "All resources", count: userScores.length, covers: userScores.slice(0, 4).map(s => s.cover_url ?? null), parent_id: null }}
                                 onClick={() => setActiveResourceColl("all")}
                               />
-                              {/* Named collections */}
-                              {resourceColls.map(c => (
+                              {/* Named collections (top-level only) */}
+                              {resourceColls.filter(c => c.parent_id === null).map(c => (
                                 <CollectionCard
                                   key={c.id} coll={c}
                                   onClick={() => setActiveResourceColl(c.id)}
@@ -921,9 +935,9 @@ export default function PublicUserProfilePage() {
                               {/* Unsorted */}
                               {(() => {
                                 const unsorted = userScores.filter(s => !s.resource_collection_id);
-                                return unsorted.length > 0 && resourceColls.length > 0 ? (
+                                return unsorted.length > 0 && resourceColls.filter(c => c.parent_id === null).length > 0 ? (
                                   <CollectionCard
-                                    coll={{ id: "unsorted", name: "Unsorted", count: unsorted.length, covers: unsorted.slice(0, 4).map(s => s.cover_url ?? null) }}
+                                    coll={{ id: "unsorted", name: "Unsorted", count: unsorted.length, covers: unsorted.slice(0, 4).map(s => s.cover_url ?? null), parent_id: null }}
                                     onClick={() => setActiveResourceColl("unsorted" as string)}
                                   />
                                 ) : null;
@@ -963,6 +977,36 @@ export default function PublicUserProfilePage() {
                         </>
                       )}
 
+                      {/* Create folder (owner only, inside a real collection) */}
+                      {activeResourceColl !== null && activeResourceColl !== "all" && activeResourceColl !== "unsorted" && isOwner && (
+                        <div style={{ marginTop: "20px", display: "flex", gap: "8px", maxWidth: "340px" }}>
+                          <input
+                            type="text"
+                            placeholder="New folder name…"
+                            value={newRcollName}
+                            onChange={e => setNewRcollName(e.target.value)}
+                            onKeyDown={e => { if (e.key === "Enter") handleCreateResourceColl(); }}
+                            style={{
+                              flex: 1, padding: "8px 12px", borderRadius: "8px",
+                              background: "#1e1513", border: "1px solid rgba(255,255,255,0.1)",
+                              color: "#fff", fontSize: "13px", outline: "none",
+                            }}
+                          />
+                          <button
+                            onClick={handleCreateResourceColl}
+                            disabled={!newRcollName.trim() || addingRcoll}
+                            style={{
+                              padding: "8px 16px", borderRadius: "8px", background: "#fff",
+                              color: "#211817", fontSize: "13px", fontWeight: 600,
+                              border: "none", cursor: "pointer",
+                              opacity: !newRcollName.trim() || addingRcoll ? 0.5 : 1,
+                            }}
+                          >
+                            + Folder
+                          </button>
+                        </div>
+                      )}
+
                       {/* Scores inside a collection */}
                       {activeResourceColl !== null && (() => {
                         const visible = activeResourceColl === "all"
@@ -970,7 +1014,28 @@ export default function PublicUserProfilePage() {
                           : activeResourceColl === "unsorted"
                           ? userScores.filter(s => !s.resource_collection_id)
                           : userScores.filter(s => s.resource_collection_id === activeResourceColl);
-                        return visible.length > 0 ? (
+                        const isRealCollection = activeResourceColl !== "all" && activeResourceColl !== "unsorted";
+                        const subFolders = isRealCollection ? resourceColls.filter(c => c.parent_id === activeResourceColl) : [];
+                        return (
+                          <>
+                            {/* Sub-folders */}
+                            {subFolders.length > 0 && (
+                              <div style={{ marginBottom: "20px" }}>
+                                <p style={{ fontSize: "11px", color: "#6b5452", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "10px" }}>Folders</p>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                                  {subFolders.map(c => (
+                                    <CollectionCard
+                                      key={c.id} coll={c}
+                                      onClick={() => setActiveResourceColl(c.id)}
+                                      isOwner={isOwner}
+                                      onDelete={() => handleDeleteResourceColl(c.id)}
+                                      onRename={name => handleRenameResourceColl(c.id, name)}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {visible.length > 0 ? (
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}
                             onClick={() => resourceScoreMenuId && setResourceScoreMenuId(null)}>
                             {visible.map(s => (
@@ -1037,8 +1102,10 @@ export default function PublicUserProfilePage() {
                               </div>
                             ))}
                           </div>
-                        ) : (
-                          <p style={{ fontSize: "13px", color: "#6b5452" }}>No scores in this collection yet.</p>
+                            ) : (
+                              <p style={{ fontSize: "13px", color: "#6b5452" }}>No scores in this collection yet.</p>
+                            )}
+                          </>
                         );
                       })()}
 
@@ -1068,12 +1135,12 @@ export default function PublicUserProfilePage() {
                             {resourceColls.map(c => (
                               <button key={c.id}
                                 onClick={() => handleMoveResourceScore(movingResourceScore.id, c.id)}
-                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left" }}
+                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left", paddingLeft: c.parent_id ? "28px" : "10px" }}
                                 onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
                                 onMouseLeave={e => e.currentTarget.style.background = "none"}
                               >
                                 <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.5 }}><path d="M3 7a2 2 0 012-2h3.586a1 1 0 01.707.293L10.414 6.4A1 1 0 0011.121 6.4L12.3 5.3A1 1 0 0113 5h6a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
-                                {c.name}
+                                {c.parent_id && <span style={{ opacity: 0.5, marginRight: "3px" }}>↳</span>}{c.name}
                               </button>
                             ))}
                             <button onClick={() => setMovingResourceScore(null)} style={{ width: "100%", marginTop: "8px", padding: "8px", background: "none", border: "none", color: "#6b5452", fontSize: "12px", cursor: "pointer" }}>
@@ -1155,7 +1222,7 @@ export default function PublicUserProfilePage() {
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
                               {/* "All saved" card */}
                               <CollectionCard
-                                coll={{ id: "all", name: "All saved", count: savedScores.length, covers: savedScores.slice(0, 4).map(s => s.cover_url ?? null) }}
+                                coll={{ id: "all", name: "All saved", count: savedScores.length, covers: savedScores.slice(0, 4).map(s => s.cover_url ?? null), parent_id: null }}
                                 onClick={() => setActiveCollection("all")}
                               />
                               {/* Named collections */}
@@ -1171,7 +1238,7 @@ export default function PublicUserProfilePage() {
                               {/* Unsorted */}
                               {unsortedSaved.length > 0 && collections.length > 0 && (
                                 <CollectionCard
-                                  coll={{ id: "unsorted", name: "Unsorted", count: unsortedSaved.length, covers: unsortedSaved.slice(0, 4).map(s => s.cover_url ?? null) }}
+                                  coll={{ id: "unsorted", name: "Unsorted", count: unsortedSaved.length, covers: unsortedSaved.slice(0, 4).map(s => s.cover_url ?? null), parent_id: null }}
                                   onClick={() => setActiveCollection("unsorted")}
                                 />
                               )}

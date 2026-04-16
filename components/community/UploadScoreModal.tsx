@@ -60,14 +60,14 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
   const [parts, setParts] = useState<Part[]>([]);
 
   // Collections
-  const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
+  const [collections, setCollections] = useState<{ id: string; name: string; parent_id: string | null }[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     const supabase = createClient();
-    supabase.from("resource_collections").select("id, name").eq("user_id", user.id).order("created_at")
-      .then(({ data }) => setCollections((data ?? []) as { id: string; name: string }[]));
+    supabase.from("resource_collections").select("id, name, parent_id").eq("user_id", user.id).order("created_at")
+      .then(({ data }) => setCollections((data ?? []) as { id: string; name: string; parent_id: string | null }[]));
   }, [user]);
 
   const hasEnteredData = useMemo(() => {
@@ -341,9 +341,11 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
                         background: active ? "rgba(200,169,126,0.18)" : "rgba(255,255,255,0.05)",
                         border: active ? "1px solid rgba(200,169,126,0.5)" : "1px solid rgba(255,255,255,0.1)",
                         color: active ? "#c8a97e" : "#8a7270",
+                        paddingLeft: c.parent_id ? "24px" : undefined,
                       }}
                     >
                       {active && <span style={{ marginRight: "5px", fontSize: "10px" }}>✓</span>}
+                      {c.parent_id && <span style={{ opacity: 0.5, marginRight: "3px" }}>↳</span>}
                       {c.name}
                     </button>
                   );

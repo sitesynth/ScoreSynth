@@ -283,9 +283,9 @@ export default function PublicUserProfilePage() {
 
   const initializedRef = useRef(false);
 
-  // Auto-save text fields with debounce
+  // Auto-save text fields with debounce (owner only)
   useEffect(() => {
-    if (!initializedRef.current || !currentUser) return;
+    if (!initializedRef.current || !currentUser || !profileUser || currentUser.id !== profileUser.id) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(async () => {
       const supabase = createClient();
@@ -304,6 +304,7 @@ export default function PublicUserProfilePage() {
 
   useEffect(() => {
     if (!handle) return;
+    initializedRef.current = false;
     const supabase = createClient();
 
     async function load() {

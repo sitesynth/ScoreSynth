@@ -103,7 +103,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
       {/* Info — fixed 80px */}
       <div style={{
         flexShrink: 0,
-        height: "80px",
+        height: "104px",
         padding: "10px 14px 12px",
         display: "flex",
         flexDirection: "column",
@@ -119,7 +119,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         <p style={{
           fontSize: "11px", color: "#6b5452",
           whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          margin: "2px 0 0",
+          margin: "8px 0 0",
         }}>
           {score.composer || "—"}
         </p>
@@ -127,7 +127,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
           <p style={{
             fontSize: "10px", color: "#4a3532",
             whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-            margin: "1px 0 0",
+            margin: "6px 0 0",
           }}>
             @{score.profiles.handle}
           </p>

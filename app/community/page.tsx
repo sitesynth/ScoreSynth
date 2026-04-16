@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,166 +9,80 @@ import Footer from "@/components/layout/Footer";
 import { createClient } from "@/lib/supabase/client";
 import type { Score } from "@/lib/supabase/types";
 import { SCORE_TAGS } from "@/lib/scores";
+import ScoreCard from "@/components/community/ScoreCard";
 
-function ScoreCard({ score }: { score: Score }) {
-  const [hovered, setHovered] = useState(false);
-  const handle = score.profiles?.handle ?? "";
-  const router = useRouter();
-
-  return (
-    <div
-      onClick={() => router.push(`/community/${score.id}`)}
-      style={{ textDecoration: "none", display: "block", minWidth: 0 }}
-    >
-      <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          borderRadius: "12px", overflow: "hidden",
-          background: "#1e1513",
-          border: `1px solid ${hovered ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)"}`,
-          transform: hovered ? "translateY(-3px)" : "translateY(0)",
-          boxShadow: hovered ? "0 8px 32px rgba(0,0,0,0.4)" : "none",
-          transition: "all 0.2s ease",
-          cursor: "pointer",
-          display: "flex", flexDirection: "column",
-        }}
-      >
-        {/* Cover image or placeholder */}
-        <div style={{ position: "relative", paddingBottom: "75%", overflow: "hidden", flexShrink: 0, background: "#f5f0eb" }}>
-          {score.cover_url ? (
-            <Image src={score.cover_url} alt={score.title} fill style={{ objectFit: "contain" }} />
-          ) : (
-            <div style={{
-              position: "absolute", inset: 0,
-              background: "linear-gradient(135deg, #2a1f1e 0%, #1a1210 100%)",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px",
-            }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5">
-                <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
-              </svg>
-              <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.2)", fontFamily: "Georgia, serif", textAlign: "center", padding: "0 16px", lineHeight: 1.4 }}>
-                {score.composer || score.title}
-              </p>
-            </div>
-          )}
-          {hovered && (
-            <div style={{
-              position: "absolute", inset: 0,
-              background: "rgba(33,24,23,0.55)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "opacity 0.2s",
-            }}>
-              <span style={{
-                fontSize: "13px", fontWeight: 500, color: "#fff",
-                padding: "8px 18px", borderRadius: "20px",
-                background: "rgba(255,255,255,0.15)",
-                backdropFilter: "blur(6px)",
-                border: "1px solid rgba(255,255,255,0.2)",
-              }}>View score</span>
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div style={{ padding: "10px 14px 12px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "2px" }}>
-          <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {score.title}
-          </p>
-          <p style={{ fontSize: "11px", color: "#6b5452", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {score.composer || "—"}
-          </p>
-
-          {score.instruments && (score.instruments as string[]).length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "5px" }}>
-              {(score.instruments as string[]).slice(0, 3).map(inst => (
-                <span
-                  key={inst}
-                  onClick={e => { e.stopPropagation(); router.push(`/community?q=${encodeURIComponent(inst)}`); }}
-                  style={{
-                    fontSize: "10px", padding: "2px 7px", borderRadius: "20px",
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: "#a89690", cursor: "pointer", whiteSpace: "nowrap",
-                    transition: "background 0.15s, color 0.15s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#e8dbd8"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#a89690"; }}
-                >
-                  {inst}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Bottom row */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "7px" }}>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
-                <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                </svg>
-                {score.likes_count.toLocaleString()}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-                {score.views_count.toLocaleString()}
-              </span>
-            </div>
-            <span style={{
-              fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
-              background: "rgba(255,255,255,0.06)",
-              color: "#a89690",
-            }}>
-              {score.tag === "free" ? "Free" : score.price_display ?? "Premium"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
+const TAG_TO_CATEGORY: Record<string, string> = {
+  Piano: "piano", Strings: "strings", Brass: "brass",
+  Symphonic: "symphonic", Guitar: "guitar", Choir: "choir",
+};
 
 export default function CommunityPage() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState("All");
-  const [pianoScores, setPianoScores] = useState<Score[]>([]);
-  const [brassScores, setBrassScores] = useState<Score[]>([]);
+  const [allScores, setAllScores] = useState<Score[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
-    async function fetchScores() {
-      const { data } = await supabase
-        .from("scores")
-        .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
-        .order("likes_count", { ascending: false });
-
-      if (data) {
-        const scores = data as unknown as Score[];
-        setPianoScores(scores.filter(s => s.category === "piano"));
-        setBrassScores(scores.filter(s => s.category === "brass"));
-      }
-      setLoading(false);
-    }
-    fetchScores();
+    supabase
+      .from("scores")
+      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
+      .order("likes_count", { ascending: false })
+      .then(({ data }) => {
+        setAllScores((data as unknown as Score[]) ?? []);
+        setLoading(false);
+      });
   }, []);
 
-  const filterScores = (scores: Score[]) => {
-    if (!query) return scores;
-    const q = query.toLowerCase();
-    return scores.filter(s =>
-      s.title.toLowerCase().includes(q) ||
-      s.composer.toLowerCase().includes(q)
-    );
-  };
+  // ── Search / filter logic ─────────────────────────────────────────────────
+  const isSearching = query.trim() !== "" || activeTag !== "All";
 
-  const filteredPiano = filterScores(pianoScores);
-  const filteredBrass = filterScores(brassScores);
+  const filteredScores = useMemo(() => {
+    let scores = allScores;
+    // Tag filter
+    if (activeTag !== "All") {
+      const cat = TAG_TO_CATEGORY[activeTag];
+      if (cat) scores = scores.filter(s => s.category === cat);
+    }
+    // Text filter
+    const q = query.trim().toLowerCase();
+    if (q) {
+      scores = scores.filter(s =>
+        s.title.toLowerCase().includes(q) ||
+        s.composer.toLowerCase().includes(q) ||
+        s.profiles?.handle?.toLowerCase().includes(q) ||
+        s.profiles?.display_name?.toLowerCase().includes(q)
+      );
+    }
+    return scores;
+  }, [allScores, query, activeTag]);
+
+  // Unique matching profiles (for handle search)
+  const matchedProfiles = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const seen = new Set<string>();
+    const profiles: { handle: string; display_name: string; avatar_url: string | null }[] = [];
+    for (const s of allScores) {
+      const p = s.profiles;
+      if (!p || seen.has(p.handle)) continue;
+      if (p.handle.toLowerCase().includes(q) || p.display_name?.toLowerCase().includes(q)) {
+        seen.add(p.handle);
+        profiles.push(p);
+      }
+    }
+    return profiles.slice(0, 6);
+  }, [allScores, query]);
+
+  // Homepage sections (no search active)
+  const pianoScores = useMemo(() => allScores.filter(s => s.category === "piano"), [allScores]);
+  const brassScores = useMemo(() => allScores.filter(s => s.category === "brass"), [allScores]);
+
+  const handleTagClick = (tag: string) => {
+    setActiveTag(tag);
+    setQuery("");
+  };
 
   return (
     <>
@@ -194,20 +108,32 @@ export default function CommunityPage() {
               <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
             </svg>
             <input
-              type="text" value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Search scores, composers, arrangements…"
+              type="text" value={query}
+              onChange={e => { setQuery(e.target.value); setActiveTag("All"); }}
+              placeholder="Search scores, composers, @handle…"
               style={{
-                width: "100%", padding: "11px 16px 11px 42px", borderRadius: "8px",
+                width: "100%", padding: "11px 40px 11px 42px", borderRadius: "8px",
                 background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
-                color: "#fff", fontSize: "14px", outline: "none",
+                color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box",
               }}
             />
+            {query && (
+              <button onClick={() => setQuery("")} style={{
+                position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                background: "none", border: "none", color: "#6b5452", cursor: "pointer",
+                display: "flex", alignItems: "center", padding: 0,
+              }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Tags */}
           <div style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
             {SCORE_TAGS.map(tag => (
-              <button key={tag} onClick={() => setActiveTag(tag)} style={{
+              <button key={tag} onClick={() => handleTagClick(tag)} style={{
                 padding: "6px 16px", borderRadius: "20px", fontSize: "13px",
                 cursor: "pointer", transition: "all 0.15s",
                 background: activeTag === tag ? "#fff" : "rgba(255,255,255,0.05)",
@@ -223,79 +149,156 @@ export default function CommunityPage() {
 
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 32px 80px" }} className="mob-px">
 
-          {/* Best of Piano */}
-          <section style={{ marginBottom: "64px" }}>
-            <div style={{ marginBottom: "20px" }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", color: "#fff", marginBottom: "4px" }}>Best of Piano</h2>
-              <p style={{ fontSize: "13px", color: "#7a6360" }}>The most searched and loved piano scores in the community.</p>
-            </div>
-            {loading ? (
-              <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
-            ) : (
-              <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
-                {filteredPiano.map(s => <ScoreCard key={s.id} score={s} />)}
-              </div>
-            )}
-          </section>
-
-          {/* Popular Categories */}
-          <section style={{ marginBottom: "64px" }}>
-            <div style={{ textAlign: "center", marginBottom: "28px" }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: "28px", color: "#fff", marginBottom: "8px" }}>Popular categories</h2>
-              <p style={{ fontSize: "13px", color: "#7a6360" }}>Explore scores by instrument and style.</p>
-            </div>
-            <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-              {[
-                { name: "Piano & Keyboard", slug: "piano", desc: "Solo piano, organ, harpsichord, and accompaniment scores.", image: "/categories/piano.png" },
-                { name: "Strings", slug: "strings", desc: "Violin, viola, cello, double bass, and string ensembles.", image: "/categories/strings-v2.png" },
-                { name: "Brass", slug: "brass", desc: "Trumpet, trombone, french horn, tuba, and brass ensembles.", image: "/categories/brass.png" },
-                { name: "Symphonic & Orchestral", slug: "symphonic", desc: "Full scores and parts for chamber and symphony orchestras.", image: "/categories/Symphomic.png" },
-                { name: "Guitar & Fretted", slug: "guitar", desc: "Classical guitar, acoustic, electric, and ukulele.", image: "/categories/guitar.png" },
-                { name: "Vocal & Choir", slug: "choir", desc: "Solo voice, art songs, opera, and choral arrangements.", image: "/categories/choir.png" },
-              ].map(cat => (
-                <Link key={cat.slug} href={`/community/category/${cat.slug}`} style={{ textDecoration: "none" }}>
-                  <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)",
-                    borderRadius: "12px", overflow: "hidden", cursor: "pointer",
-                    transition: "border-color 0.15s",
-                  }}
-                    onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.18)")}
-                    onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)")}
-                  >
-                    <div style={{ padding: "16px 18px", flex: 1, minWidth: 0 }}>
-                      <p style={{ fontFamily: "Georgia, serif", fontSize: "15px", color: "#fff", marginBottom: "4px" }}>{cat.name}</p>
-                      <p style={{ fontSize: "11px", color: "#7a6360", lineHeight: 1.5 }}>{cat.desc}</p>
-                    </div>
-                    <div style={{ width: "90px", minWidth: "90px", alignSelf: "stretch", position: "relative", flexShrink: 0, background: "transparent" }}>
-                      {cat.image && <Image src={cat.image} alt={cat.name} fill style={{ objectFit: "cover", objectPosition: "center" }} />}
-                    </div>
+          {/* ── SEARCH / FILTER RESULTS ── */}
+          {isSearching ? (
+            <div>
+              {/* Matched profiles */}
+              {matchedProfiles.length > 0 && (
+                <div style={{ marginBottom: "36px" }}>
+                  <p style={{ fontSize: "12px", color: "#6b5452", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "12px" }}>
+                    Composers & arrangers
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                    {matchedProfiles.map(p => (
+                      <Link key={p.handle} href={`/community/user/${p.handle}`} style={{ textDecoration: "none" }}>
+                        <div style={{
+                          display: "flex", alignItems: "center", gap: "10px",
+                          padding: "8px 14px 8px 8px", borderRadius: "40px",
+                          background: "#1e1513", border: "1px solid rgba(255,255,255,0.1)",
+                          transition: "border-color 0.15s",
+                        }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)")}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
+                        >
+                          <div style={{
+                            width: "30px", height: "30px", borderRadius: "50%",
+                            background: "#c0392b", overflow: "hidden",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: "13px", fontWeight: 600, color: "#fff", flexShrink: 0,
+                          }}>
+                            {p.avatar_url
+                              ? <img src={p.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              : (p.display_name || p.handle)[0]?.toUpperCase()}
+                          </div>
+                          <div>
+                            <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", margin: 0 }}>
+                              {p.display_name || p.handle}
+                            </p>
+                            <p style={{ fontSize: "11px", color: "#6b5452", margin: 0 }}>@{p.handle}</p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
-                </Link>
-              ))}
-            </div>
-          </section>
+                </div>
+              )}
 
-          {/* Brass Bands */}
-          <section style={{ marginBottom: "64px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "20px" }}>
-              <div>
-                <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", color: "#fff", marginBottom: "4px" }}>Brass Bands</h2>
-                <p style={{ fontSize: "13px", color: "#7a6360" }}>Arrangements for brass ensembles, orchestras, and wind bands.</p>
+              {/* Score results */}
+              <div style={{ marginBottom: "20px", display: "flex", alignItems: "baseline", gap: "10px" }}>
+                <p style={{ fontSize: "13px", color: "#6b5452" }}>
+                  {loading ? "Loading…" : `${filteredScores.length} score${filteredScores.length !== 1 ? "s" : ""}`}
+                  {activeTag !== "All" && <span style={{ color: "#a89690", marginLeft: "6px" }}>in {activeTag}</span>}
+                  {query && <span style={{ color: "#a89690", marginLeft: "6px" }}>for &ldquo;{query}&rdquo;</span>}
+                </p>
+                {isSearching && (
+                  <button onClick={() => { setQuery(""); setActiveTag("All"); }}
+                    style={{ fontSize: "12px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+                    Clear
+                  </button>
+                )}
               </div>
-              <Link href="/community/category/brass" style={{ fontSize: "13px", color: "#6b8fbd", textDecoration: "none", whiteSpace: "nowrap" }}>
-                Browse all scores →
-              </Link>
-            </div>
-            {loading ? (
-              <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
-            ) : (
-              <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
-                {filteredBrass.map(s => <ScoreCard key={s.id} score={s} />)}
-              </div>
-            )}
-          </section>
 
+              {loading ? (
+                <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
+              ) : filteredScores.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0" }}>
+                  <p style={{ fontFamily: "Georgia, serif", fontSize: "20px", color: "#fff", marginBottom: "8px" }}>No scores found</p>
+                  <p style={{ fontSize: "13px", color: "#6b5452" }}>Try a different search or browse categories below.</p>
+                </div>
+              ) : (
+                <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                  {filteredScores.map(s => <ScoreCard key={s.id} score={s} />)}
+                </div>
+              )}
+            </div>
+
+          ) : (
+            /* ── HOMEPAGE VIEW ── */
+            <>
+              {/* Best of Piano */}
+              <section style={{ marginBottom: "64px" }}>
+                <div style={{ marginBottom: "20px" }}>
+                  <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", color: "#fff", marginBottom: "4px" }}>Best of Piano</h2>
+                  <p style={{ fontSize: "13px", color: "#7a6360" }}>The most searched and loved piano scores in the community.</p>
+                </div>
+                {loading ? (
+                  <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
+                ) : (
+                  <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                    {pianoScores.map(s => <ScoreCard key={s.id} score={s} />)}
+                  </div>
+                )}
+              </section>
+
+              {/* Popular Categories */}
+              <section style={{ marginBottom: "64px" }}>
+                <div style={{ textAlign: "center", marginBottom: "28px" }}>
+                  <h2 style={{ fontFamily: "Georgia, serif", fontSize: "28px", color: "#fff", marginBottom: "8px" }}>Popular categories</h2>
+                  <p style={{ fontSize: "13px", color: "#7a6360" }}>Explore scores by instrument and style.</p>
+                </div>
+                <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                  {[
+                    { name: "Piano & Keyboard", slug: "piano", desc: "Solo piano, organ, harpsichord, and accompaniment scores.", image: "/categories/piano.png" },
+                    { name: "Strings", slug: "strings", desc: "Violin, viola, cello, double bass, and string ensembles.", image: "/categories/strings-v2.png" },
+                    { name: "Brass", slug: "brass", desc: "Trumpet, trombone, french horn, tuba, and brass ensembles.", image: "/categories/brass.png" },
+                    { name: "Symphonic & Orchestral", slug: "symphonic", desc: "Full scores and parts for chamber and symphony orchestras.", image: "/categories/Symphomic.png" },
+                    { name: "Guitar & Fretted", slug: "guitar", desc: "Classical guitar, acoustic, electric, and ukulele.", image: "/categories/guitar.png" },
+                    { name: "Vocal & Choir", slug: "choir", desc: "Solo voice, art songs, opera, and choral arrangements.", image: "/categories/choir.png" },
+                  ].map(cat => (
+                    <Link key={cat.slug} href={`/community/category/${cat.slug}`} style={{ textDecoration: "none" }}>
+                      <div style={{
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)",
+                        borderRadius: "12px", overflow: "hidden", cursor: "pointer",
+                        transition: "border-color 0.15s",
+                      }}
+                        onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.18)")}
+                        onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.07)")}
+                      >
+                        <div style={{ padding: "16px 18px", flex: 1, minWidth: 0 }}>
+                          <p style={{ fontFamily: "Georgia, serif", fontSize: "15px", color: "#fff", marginBottom: "4px" }}>{cat.name}</p>
+                          <p style={{ fontSize: "11px", color: "#7a6360", lineHeight: 1.5 }}>{cat.desc}</p>
+                        </div>
+                        <div style={{ width: "90px", minWidth: "90px", alignSelf: "stretch", position: "relative", flexShrink: 0 }}>
+                          {cat.image && <Image src={cat.image} alt={cat.name} fill style={{ objectFit: "cover", objectPosition: "center" }} />}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+
+              {/* Brass Bands */}
+              <section style={{ marginBottom: "64px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "20px" }}>
+                  <div>
+                    <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", color: "#fff", marginBottom: "4px" }}>Brass Bands</h2>
+                    <p style={{ fontSize: "13px", color: "#7a6360" }}>Arrangements for brass ensembles, orchestras, and wind bands.</p>
+                  </div>
+                  <Link href="/community/category/brass" style={{ fontSize: "13px", color: "#6b8fbd", textDecoration: "none", whiteSpace: "nowrap" }}>
+                    Browse all scores →
+                  </Link>
+                </div>
+                {loading ? (
+                  <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
+                ) : (
+                  <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                    {brassScores.map(s => <ScoreCard key={s.id} score={s} />)}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
         </div>
       </main>
       <Footer />

@@ -123,6 +123,15 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         }}>
           {score.composer || "—"}
         </p>
+        {score.profiles?.handle && (
+          <p style={{
+            fontSize: "10px", color: "#4a3532",
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            margin: "1px 0 0",
+          }}>
+            @{score.profiles.handle}
+          </p>
+        )}
 
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",

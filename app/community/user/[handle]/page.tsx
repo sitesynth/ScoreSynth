@@ -569,7 +569,7 @@ export default function PublicUserProfilePage() {
     if (!currentUser || !collCoverCropId) return;
     setCollCoverCropSrc(null);
     const supabase = createClient();
-    const coverPath = `collection-covers/${currentUser.id}/${Date.now()}.jpg`;
+    const coverPath = `${currentUser.id}/collection-covers/${Date.now()}.jpg`;
     const { error: storageErr } = await supabase.storage.from("avatars").upload(coverPath, blob, { upsert: true });
     if (storageErr) {
       alert(`Cover upload failed: ${storageErr.message}`);

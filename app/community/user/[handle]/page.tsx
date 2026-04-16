@@ -163,6 +163,16 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverCha
         </div>
       </div>
 
+      {/* Hidden file input for cover — must be outside menuOpen block */}
+      {onCoverChange && (
+        <input
+          ref={coverInputRef}
+          type="file" accept="image/*"
+          style={{ display: "none" }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) onCoverChange(f); e.target.value = ""; }}
+        />
+      )}
+
       {/* Owner menu button */}
       {isOwner && coll.id !== "all" && (
         <div ref={menuRef} style={{ position: "absolute", top: "8px", right: "8px", zIndex: 10 }}>
@@ -190,7 +200,7 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverCha
               {onCoverChange && (
                 <>
                   <button
-                    onClick={e => { e.stopPropagation(); setMenuOpen(false); coverInputRef.current?.click(); }}
+                    onClick={e => { e.stopPropagation(); setMenuOpen(false); setTimeout(() => coverInputRef.current?.click(), 50); }}
                     style={{
                       display: "flex", alignItems: "center", gap: "8px",
                       width: "100%", padding: "8px 10px", background: "none",
@@ -205,12 +215,6 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverCha
                     </svg>
                     Change cover
                   </button>
-                  <input
-                    ref={coverInputRef}
-                    type="file" accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={e => { const f = e.target.files?.[0]; if (f) onCoverChange(f); e.target.value = ""; }}
-                  />
                   <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
                 </>
               )}

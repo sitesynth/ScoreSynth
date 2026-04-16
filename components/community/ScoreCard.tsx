@@ -24,8 +24,6 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         minWidth: 0,
         display: "flex",
         flexDirection: "column",
-        /* ── Aspect ratio keeps cards proportional at any column width ── */
-        aspectRatio: "3/4",
         borderRadius: "12px",
         overflow: "hidden",
         background: "#1e1513",
@@ -35,11 +33,17 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         transition: "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.18s ease",
       }}
     >
-      {/* ── Image – flex:1 fills all space above the info bar ── */}
+      {/*
+        Image container — padding-top trick pins the box to exactly 70% of its
+        own width (≈ 10:7 ratio), regardless of the image's natural dimensions.
+        position:relative + overflow:hidden clips everything outside.
+        The img is absolute inside so it never pushes the box taller.
+      */}
       <div style={{
-        flex: 1,
-        minHeight: 0,
+        flexShrink: 0,
         position: "relative",
+        width: "100%",
+        paddingTop: "70%",        /* height = 70% of card width — always */
         overflow: "hidden",
         background: score.cover_url ? "#f5f0eb" : "#1a1210",
       }}>
@@ -55,7 +59,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
             }}
           />
         ) : (
-          /* A4 paper peeking from top on dark mat */
+          /* A4 paper peeking from top */
           <div style={{
             position: "absolute",
             top: "6%", left: "12%", right: "12%", bottom: "-60%",
@@ -64,7 +68,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
             transform: hovered ? "scale(1.03)" : "scale(1)",
             transition: "transform 0.3s ease, box-shadow 0.3s ease",
             display: "flex", flexDirection: "column", alignItems: "center",
-            paddingTop: "14%",
+            paddingTop: "12%",
           }}>
             <svg width="18" height="32" viewBox="0 0 20 36" fill="none" style={{ opacity: 0.12, marginBottom: "6%" }}>
               <path d="M10 1 C10 1 4 9 4 17 C4 24 8 27 10 29 C12 31 14 33 14 36" stroke="#1a1210" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
@@ -106,14 +110,14 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         </div>
       </div>
 
-      {/* ── Info – proportional to card, always same ratio ── */}
+      {/* Info — fixed 80 px, never changes */}
       <div style={{
-        flex: "0 0 28%",
+        flexShrink: 0,
+        height: "80px",
         padding: "10px 14px 12px",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        minHeight: 0,
       }}>
         <p style={{
           fontSize: "13px", fontWeight: 500, color: "#e8dbd8",

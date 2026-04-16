@@ -73,20 +73,22 @@ function InlineField({
 }
 
 // ─── Collection card (Pinterest style) ──────────────────────────────────────
-type Collection = { id: string; name: string; count: number; covers: (string | null)[]; parent_id: string | null };
+type Collection = { id: string; name: string; count: number; covers: (string | null)[]; parent_id: string | null; cover_url?: string | null };
 
-function CollectionCard({ coll, onClick, isOwner, onDelete, onRename }: {
+function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverChange }: {
   coll: Collection;
   onClick: () => void;
   isOwner?: boolean;
   onDelete?: () => void;
   onRename?: (newName: string) => void;
+  onCoverChange?: (file: File) => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState(coll.name);
   const menuRef = useRef<HTMLDivElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const covers = coll.covers.slice(0, 4);
   while (covers.length < 4) covers.push(null);
 
@@ -115,21 +117,27 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename }: {
           transition: "all 0.2s ease", cursor: "pointer",
         }}
       >
-        {/* 2×2 cover grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", aspectRatio: "1/1" }}>
-          {covers.map((src, i) => (
-            <div key={i} style={{ position: "relative", overflow: "hidden", background: "#1a1210" }}>
-              {src
-                ? <Image src={src} alt="" fill style={{ objectFit: "cover" }} />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" viewBox="0 0 24 24">
-                      <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
-                    </svg>
-                  </div>
-              }
-            </div>
-          ))}
-        </div>
+        {/* Cover: custom image OR 2×2 grid */}
+        {coll.cover_url ? (
+          <div style={{ position: "relative", aspectRatio: "1/1", overflow: "hidden", background: "#1a1210" }}>
+            <Image src={coll.cover_url} alt={coll.name} fill style={{ objectFit: "cover" }} />
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", aspectRatio: "1/1" }}>
+            {covers.map((src, i) => (
+              <div key={i} style={{ position: "relative", overflow: "hidden", background: "#1a1210" }}>
+                {src
+                  ? <Image src={src} alt="" fill style={{ objectFit: "cover" }} />
+                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" viewBox="0 0 24 24">
+                        <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+                      </svg>
+                    </div>
+                }
+              </div>
+            ))}
+          </div>
+        )}
         <div style={{ padding: "10px 12px" }}>
           {renaming ? (
             <input
@@ -178,6 +186,33 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename }: {
               borderRadius: "9px", padding: "6px",
               boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: "150px",
             }}>
+              {onCoverChange && (
+                <>
+                  <button
+                    onClick={e => { e.stopPropagation(); setMenuOpen(false); coverInputRef.current?.click(); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "8px",
+                      width: "100%", padding: "8px 10px", background: "none",
+                      border: "none", color: "#e8dbd8", fontSize: "13px",
+                      cursor: "pointer", borderRadius: "6px", textAlign: "left",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    Change cover
+                  </button>
+                  <input
+                    ref={coverInputRef}
+                    type="file" accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) onCoverChange(f); e.target.value = ""; }}
+                  />
+                  <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
+                </>
+              )}
               <button
                 onClick={e => { e.stopPropagation(); setMenuOpen(false); setRenaming(true); setRenameVal(coll.name); }}
                 style={{
@@ -340,11 +375,11 @@ export default function PublicUserProfilePage() {
 
       // Load resource collections
       const { data: rcollData } = await supabase.from("resource_collections")
-        .select("id, name, parent_id").eq("user_id", p.id).order("created_at");
-      const rawRcolls = (rcollData ?? []) as { id: string; name: string; parent_id: string | null }[];
+        .select("id, name, parent_id, cover_url").eq("user_id", p.id).order("created_at");
+      const rawRcolls = (rcollData ?? []) as { id: string; name: string; parent_id: string | null; cover_url: string | null }[];
       const rcolls: Collection[] = rawRcolls.map(c => {
         const collScores = scores.filter(s => s.resource_collection_id === c.id);
-        return { id: c.id, name: c.name, parent_id: c.parent_id ?? null, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
+        return { id: c.id, name: c.name, parent_id: c.parent_id ?? null, cover_url: c.cover_url ?? null, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
       });
       setResourceColls(rcolls);
 
@@ -515,6 +550,17 @@ export default function PublicUserProfilePage() {
     const supabase = createClient();
     await supabase.from("resource_collections").update({ name: newName }).eq("id", collId).eq("user_id", currentUser.id);
     setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, name: newName } : c));
+  };
+
+  const handleUpdateCollectionCover = async (collId: string, file: File) => {
+    if (!currentUser) return;
+    const supabase = createClient();
+    const coverPath = `${currentUser.id}/${Date.now()}-coll-cover.${file.name.split(".").pop()}`;
+    const { error } = await supabase.storage.from("avatars").upload(coverPath, file);
+    if (error) return;
+    const { data } = supabase.storage.from("avatars").getPublicUrl(coverPath);
+    await supabase.from("resource_collections").update({ cover_url: data.publicUrl }).eq("id", collId).eq("user_id", currentUser.id);
+    setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, cover_url: data.publicUrl } : c));
   };
 
   const handleMoveResourceScore = async (scoreId: string, toCollId: string | null) => {
@@ -930,6 +976,7 @@ export default function PublicUserProfilePage() {
                                   isOwner={isOwner}
                                   onDelete={() => handleDeleteResourceColl(c.id)}
                                   onRename={name => handleRenameResourceColl(c.id, name)}
+                                  onCoverChange={isOwner ? (file) => handleUpdateCollectionCover(c.id, file) : undefined}
                                 />
                               ))}
                               {/* Unsorted */}
@@ -1030,6 +1077,7 @@ export default function PublicUserProfilePage() {
                                       isOwner={isOwner}
                                       onDelete={() => handleDeleteResourceColl(c.id)}
                                       onRename={name => handleRenameResourceColl(c.id, name)}
+                                  onCoverChange={isOwner ? (file) => handleUpdateCollectionCover(c.id, file) : undefined}
                                     />
                                   ))}
                                 </div>

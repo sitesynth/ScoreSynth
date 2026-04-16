@@ -2,9 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function Hero() {
   const [email, setEmail] = useState("");
+
+  const handleGoogle = async () => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  };
 
   return (
     <section style={{ paddingTop: "120px", paddingBottom: "80px", paddingLeft: "32px", paddingRight: "32px" }} className="mob-px">
@@ -31,6 +40,7 @@ export default function Hero() {
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", width: "100%", maxWidth: "340px" }}>
             {/* Google */}
             <button
+              onClick={handleGoogle}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
                 width: "100%", padding: "12px 16px", borderRadius: "10px",

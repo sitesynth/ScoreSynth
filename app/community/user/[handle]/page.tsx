@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 import type { Profile, Score } from "@/lib/supabase/types";
 import AvatarCropper from "@/components/community/AvatarCropper";
+import CoverCropper from "@/components/community/CoverCropper";
 import MessageModal from "@/components/community/MessageModal";
 
 // ─── Inline editable field (owner only) ────────────────────────────────────
@@ -303,6 +304,8 @@ export default function PublicUserProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarHover, setAvatarHover] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [collCoverCropSrc, setCollCoverCropSrc] = useState<string | null>(null);
+  const [collCoverCropId, setCollCoverCropId] = useState<string | null>(null);
   const [newCollName, setNewCollName] = useState("");
   const [addingColl, setAddingColl] = useState(false);
   const [movingScore, setMovingScore] = useState<Score | null>(null);
@@ -552,12 +555,18 @@ export default function PublicUserProfilePage() {
     setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, name: newName } : c));
   };
 
-  const handleUpdateCollectionCover = async (collId: string, file: File) => {
-    if (!currentUser) return;
+  const handleUpdateCollectionCover = (collId: string, file: File) => {
+    const src = URL.createObjectURL(file);
+    setCollCoverCropId(collId);
+    setCollCoverCropSrc(src);
+  };
+
+  const handleCollCoverCropConfirm = async (blob: Blob) => {
+    if (!currentUser || !collCoverCropId) return;
+    setCollCoverCropSrc(null);
     const supabase = createClient();
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const coverPath = `collection-covers/${currentUser.id}/${Date.now()}.${ext}`;
-    const { error: storageErr } = await supabase.storage.from("avatars").upload(coverPath, file, { upsert: true });
+    const coverPath = `collection-covers/${currentUser.id}/${Date.now()}.jpg`;
+    const { error: storageErr } = await supabase.storage.from("avatars").upload(coverPath, blob, { upsert: true });
     if (storageErr) {
       alert(`Cover upload failed: ${storageErr.message}`);
       return;
@@ -565,13 +574,14 @@ export default function PublicUserProfilePage() {
     const { data } = supabase.storage.from("avatars").getPublicUrl(coverPath);
     const { error: dbErr } = await supabase.from("resource_collections")
       .update({ cover_url: data.publicUrl })
-      .eq("id", collId)
+      .eq("id", collCoverCropId)
       .eq("user_id", currentUser.id);
     if (dbErr) {
       alert(`Failed to save cover: ${dbErr.message}`);
       return;
     }
-    setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, cover_url: data.publicUrl } : c));
+    setResourceColls(prev => prev.map(c => c.id === collCoverCropId ? { ...c, cover_url: data.publicUrl } : c));
+    setCollCoverCropId(null);
   };
 
   const handleMoveResourceScore = async (scoreId: string, toCollId: string | null) => {
@@ -1481,6 +1491,13 @@ export default function PublicUserProfilePage() {
           imageSrc={cropSrc}
           onConfirm={handleCropConfirm}
           onCancel={() => { setCropSrc(null); if (avatarInputRef.current) avatarInputRef.current.value = ""; }}
+        />
+      )}
+      {collCoverCropSrc && (
+        <CoverCropper
+          imageSrc={collCoverCropSrc}
+          onConfirm={handleCollCoverCropConfirm}
+          onCancel={() => { setCollCoverCropSrc(null); setCollCoverCropId(null); }}
         />
       )}
       {showMessageModal && currentUser && profileUser && (

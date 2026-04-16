@@ -555,11 +555,22 @@ export default function PublicUserProfilePage() {
   const handleUpdateCollectionCover = async (collId: string, file: File) => {
     if (!currentUser) return;
     const supabase = createClient();
-    const coverPath = `${currentUser.id}/${Date.now()}-coll-cover.${file.name.split(".").pop()}`;
-    const { error } = await supabase.storage.from("avatars").upload(coverPath, file);
-    if (error) return;
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const coverPath = `collection-covers/${currentUser.id}/${Date.now()}.${ext}`;
+    const { error: storageErr } = await supabase.storage.from("avatars").upload(coverPath, file, { upsert: true });
+    if (storageErr) {
+      alert(`Cover upload failed: ${storageErr.message}`);
+      return;
+    }
     const { data } = supabase.storage.from("avatars").getPublicUrl(coverPath);
-    await supabase.from("resource_collections").update({ cover_url: data.publicUrl }).eq("id", collId).eq("user_id", currentUser.id);
+    const { error: dbErr } = await supabase.from("resource_collections")
+      .update({ cover_url: data.publicUrl })
+      .eq("id", collId)
+      .eq("user_id", currentUser.id);
+    if (dbErr) {
+      alert(`Failed to save cover: ${dbErr.message}`);
+      return;
+    }
     setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, cover_url: data.publicUrl } : c));
   };
 

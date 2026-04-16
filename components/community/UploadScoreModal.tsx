@@ -313,66 +313,106 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
           </div>
 
           {/* ── Instrument Parts ── */}
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "14px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <div>
-                <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", margin: 0 }}>Instrument Parts</p>
-                <p style={{ fontSize: "11px", color: "#6b5452", margin: "2px 0 0" }}>
-                  Upload individual parts (Violin I, Cello, Trumpet…) so players can download their part separately.
-                </p>
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "16px" }}>
+            {/* Header */}
+            <div style={{ marginBottom: "12px" }}>
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "#e8dbd8", margin: "0 0 3px" }}>Instrument Parts</p>
+              <p style={{ fontSize: "11px", color: "#6b5452", margin: 0, lineHeight: 1.5 }}>
+                Upload individual parts (Violin I, Cello, Trumpet…) so players can download separately.
+              </p>
+            </div>
+
+            {/* Parts list */}
+            {parts.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "10px" }}>
+                {parts.map((part, i) => (
+                  <div key={i} style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr auto",
+                    gap: "8px", alignItems: "center",
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    borderRadius: "10px", padding: "8px 10px",
+                  }}>
+                    <input
+                      type="text"
+                      placeholder="Name, e.g. Violin I"
+                      value={part.name}
+                      onChange={e => updatePartName(i, e.target.value)}
+                      style={{
+                        ...inputStyle, padding: "7px 10px", fontSize: "12px",
+                        background: "rgba(255,255,255,0.05)",
+                      }}
+                    />
+                    <label style={{
+                      display: "flex", alignItems: "center", gap: "6px",
+                      padding: "7px 10px", borderRadius: "8px", cursor: "pointer",
+                      background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.1)",
+                      fontSize: "12px", color: part.file ? "#c8a97e" : "#6b5452",
+                      overflow: "hidden",
+                    }}>
+                      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {part.file ? part.file.name : "Choose PDF…"}
+                      </span>
+                      <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => updatePartFile(i, e.target.files?.[0] ?? null)} />
+                    </label>
+                    <button
+                      onClick={() => removePart(i)}
+                      title="Remove"
+                      style={{
+                        background: "none", border: "none", color: "#4a3532",
+                        cursor: "pointer", padding: "4px", borderRadius: "6px",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "color 0.15s",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "#c0392b")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "#4a3532")}
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
               </div>
+            )}
+
+            {/* Empty state + Add button */}
+            {parts.length === 0 ? (
               <button
                 onClick={addPart}
                 style={{
-                  padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 500,
-                  background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#e8dbd8", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+                  width: "100%", padding: "14px", borderRadius: "10px",
+                  border: "1px dashed rgba(255,255,255,0.1)", background: "transparent",
+                  color: "#6b5452", fontSize: "12px", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                  transition: "border-color 0.15s, color 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)"; e.currentTarget.style.color = "#e8dbd8"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#6b5452"; }}
+              >
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add instrument part
+              </button>
+            ) : (
+              <button
+                onClick={addPart}
+                style={{
+                  padding: "6px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 500,
+                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#c8b8b6", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px",
                 }}
               >
-                + Add part
+                <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add part
               </button>
-            </div>
-
-            {parts.length === 0 && (
-              <p style={{ fontSize: "12px", color: "#4a3532", fontStyle: "italic" }}>No parts added yet.</p>
             )}
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {parts.map((part, i) => (
-                <div key={i} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <input
-                    type="text"
-                    placeholder="Instrument name (e.g. Violin I)"
-                    value={part.name}
-                    onChange={e => updatePartName(i, e.target.value)}
-                    style={{ ...inputStyle, flex: "0 0 180px" }}
-                  />
-                  <label style={{
-                    flex: 1, display: "flex", alignItems: "center", gap: "8px",
-                    padding: "10px 12px", borderRadius: "8px", cursor: "pointer",
-                    background: "#1e1513", border: "1px dashed rgba(255,255,255,0.12)",
-                    fontSize: "12px", color: part.file ? "#e8dbd8" : "#6b5452",
-                    overflow: "hidden",
-                  }}>
-                    <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {part.file ? part.file.name : "Choose PDF…"}
-                    </span>
-                    <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => updatePartFile(i, e.target.files?.[0] ?? null)} />
-                  </label>
-                  <button
-                    onClick={() => removePart(i)}
-                    style={{ background: "none", border: "none", color: "#6b5452", cursor: "pointer", padding: "4px", flexShrink: 0 }}
-                  >
-                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 

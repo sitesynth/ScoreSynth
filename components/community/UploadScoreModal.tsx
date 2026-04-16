@@ -126,9 +126,9 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
     let coverUrl: string | null = null;
     if (coverFile) {
       const coverPath = `${user.id}/${Date.now()}-${coverFile.name}`;
-      const { error: coverErr } = await supabase.storage.from("covers").upload(coverPath, coverFile);
+      const { error: coverErr } = await supabase.storage.from("avatars").upload(coverPath, coverFile);
       if (!coverErr) {
-        const { data } = supabase.storage.from("covers").getPublicUrl(coverPath);
+        const { data } = supabase.storage.from("avatars").getPublicUrl(coverPath);
         coverUrl = data.publicUrl;
       }
     }

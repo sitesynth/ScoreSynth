@@ -40,7 +40,6 @@ export default function OnboardingPage() {
           display_name: meta.display_name || meta.handle,
           bio: "",
           avatar_url: meta.avatar_url || meta.picture || null,
-          banner_url: null,
         });
         if (!error) {
           router.push(`/community/user/${meta.handle}`);
@@ -86,13 +85,17 @@ export default function OnboardingPage() {
     if (!userId) return;
     setSaving(true);
 
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const avatarUrl = currentUser?.user_metadata?.avatar_url
+      || currentUser?.user_metadata?.picture
+      || null;
+
     const { error } = await supabase.from("profiles").upsert({
       id: userId,
       handle: handle.toLowerCase(),
       display_name: displayName.trim() || handle,
       bio: "",
-      avatar_url: null,
-      banner_url: null,
+      avatar_url: avatarUrl,
     });
 
     setSaving(false);

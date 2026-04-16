@@ -390,9 +390,17 @@ export default function PublicUserProfilePage() {
       const { data: rcollData } = await supabase.from("resource_collections")
         .select("id, name, parent_id, cover_url").eq("user_id", p.id).order("created_at");
       const rawRcolls = (rcollData ?? []) as { id: string; name: string; parent_id: string | null; cover_url: string | null }[];
+      // Helper: get all descendant collection ids (including self)
+      const getAllDescendantIds = (collId: string, allColls: typeof rawRcolls): string[] => {
+        const children = allColls.filter(c => c.parent_id === collId);
+        return [collId, ...children.flatMap(c => getAllDescendantIds(c.id, allColls))];
+      };
+
       const rcolls: Collection[] = rawRcolls.map(c => {
-        const collScores = scores.filter(s => s.resource_collection_id === c.id);
-        return { id: c.id, name: c.name, parent_id: c.parent_id ?? null, cover_url: c.cover_url ?? null, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
+        const allIds = getAllDescendantIds(c.id, rawRcolls);
+        const collScores = scores.filter(s => s.resource_collection_id && allIds.includes(s.resource_collection_id));
+        const directScores = scores.filter(s => s.resource_collection_id === c.id);
+        return { id: c.id, name: c.name, parent_id: c.parent_id ?? null, cover_url: c.cover_url ?? null, count: collScores.length, covers: directScores.slice(0, 4).map(s => s.cover_url ?? null) };
       });
       setResourceColls(rcolls);
 

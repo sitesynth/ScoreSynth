@@ -36,6 +36,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
   const [tag,         setTag]         = useState<"free" | "premium">((score.tag as "free" | "premium") ?? "free");
   const [priceDisplay, setPriceDisplay] = useState(score.price_display ?? "");
   const [coverFile,   setCoverFile]   = useState<File | null>(null);
+  const [pdfFile,     setPdfFile]     = useState<File | null>(null);
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState<string | null>(null);
 
@@ -49,16 +50,27 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
     if (!user) { setError("Not authenticated."); setSaving(false); return; }
 
     let coverUrl = score.cover_url ?? null;
+    let pdfUrl   = score.pdf_url   ?? null;
+
+    // Upload new PDF if provided
+    if (pdfFile) {
+      const pdfPath = `${user.id}/${Date.now()}-${pdfFile.name}`;
+      const { error: pdfErr } = await supabase.storage
+        .from("score-files")
+        .upload(pdfPath, pdfFile);
+      if (pdfErr) { setError(`PDF upload failed: ${pdfErr.message}`); setSaving(false); return; }
+      pdfUrl = pdfPath;
+    }
 
     // Upload new cover if provided
     if (coverFile) {
       const ts = Date.now();
       const coverPath = `${user.id}/${ts}-${coverFile.name}`;
       const { error: coverErr } = await supabase.storage
-        .from("covers")
+        .from("avatars")
         .upload(coverPath, coverFile);
       if (!coverErr) {
-        const { data } = supabase.storage.from("covers").getPublicUrl(coverPath);
+        const { data } = supabase.storage.from("avatars").getPublicUrl(coverPath);
         coverUrl = data.publicUrl;
       }
     }
@@ -74,6 +86,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       tag,
       price_display: tag === "premium" && priceDisplay ? priceDisplay.trim() : null,
       cover_url:     coverUrl,
+      pdf_url:       pdfUrl,
       updated_at:    new Date().toISOString(),
     };
 
@@ -217,6 +230,53 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
               style={{ marginTop: "8px", width: "100%", borderRadius: "8px", maxHeight: "140px", objectFit: "cover" }}
             />
           )}
+        </div>
+
+        {/* PDF file */}
+        <div>
+          <label style={{ fontSize: "12px", color: "#6b5452", marginBottom: "6px", display: "block" }}>
+            Sheet music PDF {score.pdf_url ? "(replace)" : "(upload)"}
+          </label>
+          {score.pdf_url && !pdfFile && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              padding: "8px 12px", borderRadius: "8px", marginBottom: "8px",
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
+              fontSize: "12px", color: "#8a7270",
+            }}>
+              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Current file uploaded
+            </div>
+          )}
+          <label style={{
+            display: "flex", alignItems: "center", gap: "10px",
+            padding: "10px 14px", borderRadius: "8px", cursor: "pointer",
+            background: "#1e1513",
+            border: pdfFile ? "1px solid rgba(200,169,126,0.4)" : "1px dashed rgba(255,255,255,0.15)",
+            fontSize: "13px", color: pdfFile ? "#c8a97e" : "#6b5452",
+          }}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            {pdfFile ? pdfFile.name : "Choose new PDF…"}
+            <input
+              type="file"
+              accept=".pdf"
+              style={{ display: "none" }}
+              onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
+            />
+            {pdfFile && (
+              <button
+                type="button"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setPdfFile(null); }}
+                style={{ marginLeft: "auto", background: "none", border: "none", color: "#6b5452", cursor: "pointer", padding: "0", fontSize: "16px", lineHeight: 1 }}
+              >×</button>
+            )}
+          </label>
         </div>
 
         {error && <p style={{ fontSize: "12px", color: "#c0392b" }}>{error}</p>}

@@ -8,6 +8,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { createClient } from "@/lib/supabase/client";
 import type { Score } from "@/lib/supabase/types";
+import ScoreCard from "@/components/community/ScoreCard";
 
 const CATEGORY_META: Record<string, { name: string; desc: string; image: string }> = {
   piano:      { name: "Piano & Keyboard",      desc: "Solo piano, organ, harpsichord, and accompaniment scores.",     image: "/categories/detail/piano.webp" },
@@ -35,64 +36,6 @@ const ALL_CATEGORIES = [
   { slug: "soundtracks", name: "Soundtracks" },
 ];
 
-function ScoreCard({ score }: { score: Score }) {
-  const [hovered, setHovered] = useState(false);
-  const handle = score.profiles?.handle ?? "";
-
-  return (
-    <Link href={`/community/${score.id}`} style={{ textDecoration: "none", minWidth: 0, display: "block" }}>
-      <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          borderRadius: "12px", overflow: "hidden",
-          background: "#1e1513",
-          border: `1px solid ${hovered ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)"}`,
-          transform: hovered ? "translateY(-3px)" : "translateY(0)",
-          boxShadow: hovered ? "0 8px 32px rgba(0,0,0,0.4)" : "none",
-          transition: "all 0.2s ease",
-          cursor: "pointer",
-          display: "flex", flexDirection: "column",
-        }}
-      >
-        <div style={{ background: "#f5f0eb", position: "relative", paddingBottom: "75%", overflow: "hidden", flexShrink: 0 }}>
-          <Image src="/scoreimagedefaultpreview.png" alt={score.title} fill style={{ objectFit: "contain" }} />
-          {hovered && (
-            <div style={{ position: "absolute", inset: 0, background: "rgba(33,24,23,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: "13px", fontWeight: 500, color: "#fff", padding: "8px 18px", borderRadius: "20px", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.2)" }}>View score</span>
-            </div>
-          )}
-        </div>
-        <div style={{ padding: "12px 14px 14px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          <p style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {score.title}
-          </p>
-          <span style={{ fontSize: "11px", color: "#6b5452" }}>@{handle}</span>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
-                <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                </svg>
-                {score.likes_count.toLocaleString()}
-              </span>
-              <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#6b5452" }}>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-                </svg>
-                {score.views_count.toLocaleString()}
-              </span>
-            </div>
-            <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.06)", color: "#a89690" }}>
-              {score.tag === "free" ? "Free" : score.price_display ?? "Premium"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 export default function CategoryPage() {
   const { slug } = useParams() as { slug: string };
   const meta = CATEGORY_META[slug];
@@ -104,7 +47,7 @@ export default function CategoryPage() {
     const supabase = createClient();
     supabase
       .from("scores")
-      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, instruments, pages, publisher, description, difficulty, midi_url, pdf_url, created_at, updated_at, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
+      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, pages, publisher, description, difficulty, midi_url, pdf_url, created_at, updated_at, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
       .eq("category", slug)
       .order("likes_count", { ascending: false })
       .then(({ data }) => {

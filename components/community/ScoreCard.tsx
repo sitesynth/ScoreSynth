@@ -34,32 +34,22 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
       }}
     >
       {/*
-        Image container — padding-top trick pins the box to exactly 70% of its
-        own width (≈ 10:7 ratio), regardless of the image's natural dimensions.
-        position:relative + overflow:hidden clips everything outside.
-        The img is absolute inside so it never pushes the box taller.
+        Image area: paddingTop 70% sets height = 70% of card width.
+        Using background-image (not <img>) so the image has zero intrinsic
+        dimensions and can NEVER push the container taller. Guaranteed.
       */}
       <div style={{
         flexShrink: 0,
-        position: "relative",
         width: "100%",
-        paddingTop: "70%",        /* height = 70% of card width — always */
+        paddingTop: "70%",
+        position: "relative",
         overflow: "hidden",
-        background: score.cover_url ? "#f5f0eb" : "#1a1210",
+        background: score.cover_url
+          ? `#f5f0eb url("${score.cover_url}") top center / cover no-repeat`
+          : "#1a1210",
       }}>
-        {score.cover_url ? (
-          <img
-            src={score.cover_url}
-            alt={score.title}
-            style={{
-              position: "absolute", inset: 0,
-              width: "100%", height: "100%",
-              objectFit: "cover", objectPosition: "top center",
-              display: "block",
-            }}
-          />
-        ) : (
-          /* A4 paper peeking from top */
+        {/* No-cover: A4 paper placeholder */}
+        {!score.cover_url && (
           <div style={{
             position: "absolute",
             top: "6%", left: "12%", right: "12%", bottom: "-60%",
@@ -83,7 +73,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         {/* Hover overlay */}
         <div style={{
           position: "absolute", inset: 0,
-          background: score.cover_url ? "rgba(22,16,15,0.45)" : "rgba(22,16,15,0.2)",
+          background: "rgba(22,16,15,0.45)",
           display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
           opacity: hovered ? 1 : 0, transition: "opacity 0.18s ease", zIndex: 2,
         }}>
@@ -110,7 +100,7 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         </div>
       </div>
 
-      {/* Info — fixed 80 px, never changes */}
+      {/* Info — fixed 80px */}
       <div style={{
         flexShrink: 0,
         height: "80px",

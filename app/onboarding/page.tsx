@@ -24,7 +24,7 @@ export default function OnboardingPage() {
 
       // Check if already has profile
       const { data: existingProfile } = await supabase
-        .from("profiles").select("handle").eq("id", user.id).single();
+        .from("profiles").select("handle").eq("id", user.id).maybeSingle();
       if (existingProfile?.handle) {
         router.push(`/community/user/${existingProfile.handle}`);
         return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 
@@ -18,6 +18,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
 
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
@@ -34,6 +35,55 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
 
   // Instrument parts
   const [parts, setParts] = useState<Part[]>([]);
+
+  const hasEnteredData = useMemo(() => {
+    const hasPartData = parts.some((p) => p.name.trim() || p.file);
+
+    return Boolean(
+      title.trim() ||
+      composer.trim() ||
+      publisher.trim() ||
+      description.trim() ||
+      instruments.trim() ||
+      (tag === "premium" && priceDisplay.trim()) ||
+      difficulty !== "Intermediate" ||
+      category !== "piano" ||
+      pages !== 1 ||
+      pdfFile ||
+      coverFile ||
+      hasPartData,
+    );
+  }, [
+    title,
+    composer,
+    publisher,
+    description,
+    instruments,
+    tag,
+    priceDisplay,
+    difficulty,
+    category,
+    pages,
+    pdfFile,
+    coverFile,
+    parts,
+  ]);
+
+  const handleRequestClose = () => {
+    if (uploading) return;
+
+    if (hasEnteredData) {
+      setShowCloseConfirm(true);
+      return;
+    }
+
+    onClose();
+  };
+
+  const handleConfirmClose = () => {
+    setShowCloseConfirm(false);
+    onClose();
+  };
 
   const addPart = () => setParts(prev => [...prev, { name: "", file: null }]);
   const removePart = (i: number) => setParts(prev => prev.filter((_, idx) => idx !== i));
@@ -117,7 +167,6 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
 
   return (
     <div
-      onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 100,
         background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)",
@@ -140,7 +189,12 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
           <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", color: "#fff", fontWeight: 400 }}>
             Upload a score
           </h2>
-          <button onClick={onClose} style={{ color: "#6b5452", fontSize: "20px", lineHeight: 1, padding: "4px", cursor: "pointer", background: "none", border: "none" }}>×</button>
+          <button
+            onClick={handleRequestClose}
+            style={{ color: "#6b5452", fontSize: "20px", lineHeight: 1, padding: "4px", cursor: "pointer", background: "none", border: "none" }}
+          >
+            ×
+          </button>
         </div>
 
         {/* Fields */}
@@ -312,6 +366,82 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
           {uploading ? `Uploading… (${parts.filter(p => p.file).length > 0 ? "score + parts" : "score"})` : "Publish score"}
         </button>
       </div>
+
+      {showCloseConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 110,
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(3px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              background: "#2a1f1e",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: "16px",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.45)",
+              padding: "20px",
+            }}
+          >
+            <h3
+              style={{
+                margin: "0 0 8px",
+                fontFamily: "Georgia, serif",
+                fontSize: "24px",
+                color: "#fff",
+                fontWeight: 400,
+              }}
+            >
+              Close upload form?
+            </h3>
+            <p style={{ margin: "0 0 16px", fontSize: "13px", color: "#a89690", lineHeight: 1.55 }}>
+              You have unsaved changes. If you close now, entered data and selected files will be lost.
+            </p>
+
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setShowCloseConfirm(false)}
+                style={{
+                  padding: "9px 14px",
+                  borderRadius: "10px",
+                  border: "1px solid rgba(255,255,255,0.16)",
+                  background: "transparent",
+                  color: "#e8dbd8",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                }}
+              >
+                Continue editing
+              </button>
+              <button
+                onClick={handleConfirmClose}
+                style={{
+                  padding: "9px 14px",
+                  borderRadius: "10px",
+                  border: "none",
+                  background: "#c0392b",
+                  color: "#fff",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Close without saving
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

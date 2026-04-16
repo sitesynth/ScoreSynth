@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 
@@ -58,6 +58,17 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
 
   // Instrument parts
   const [parts, setParts] = useState<Part[]>([]);
+
+  // Collections
+  const [collections, setCollections] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const supabase = createClient();
+    supabase.from("resource_collections").select("id, name").eq("user_id", user.id).order("created_at")
+      .then(({ data }) => setCollections((data ?? []) as { id: string; name: string }[]));
+  }, [user]);
 
   const hasEnteredData = useMemo(() => {
     const hasPartData = parts.some((p) => p.name.trim() || p.file);
@@ -182,6 +193,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
       cover_url: coverUrl,
       author_id: user.id,
       parts: uploadedParts,
+      resource_collection_id: selectedCollectionId,
     });
 
     setUploading(false);
@@ -311,6 +323,34 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
               <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => setPdfFile(e.target.files?.[0] ?? null)} />
             </label>
           </div>
+
+          {/* ── Collection ── */}
+          {collections.length > 0 && (
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "16px" }}>
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "#e8dbd8", margin: "0 0 10px" }}>Add to Collection</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+                {collections.map(c => {
+                  const active = selectedCollectionId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setSelectedCollectionId(active ? null : c.id)}
+                      style={{
+                        padding: "5px 13px", borderRadius: "20px", fontSize: "12px", fontWeight: 500,
+                        cursor: "pointer", transition: "all 0.15s",
+                        background: active ? "rgba(200,169,126,0.18)" : "rgba(255,255,255,0.05)",
+                        border: active ? "1px solid rgba(200,169,126,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                        color: active ? "#c8a97e" : "#8a7270",
+                      }}
+                    >
+                      {active && <span style={{ marginRight: "5px", fontSize: "10px" }}>✓</span>}
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Instrument Parts ── */}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "16px" }}>

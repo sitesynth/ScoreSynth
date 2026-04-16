@@ -24,8 +24,8 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         minWidth: 0,
         display: "flex",
         flexDirection: "column",
-        /* ── Total card height is fixed → every card identical ── */
-        height: "clamp(280px, 28vw, 380px)",
+        /* ── Aspect ratio keeps cards proportional at any column width ── */
+        aspectRatio: "3/4",
         borderRadius: "12px",
         overflow: "hidden",
         background: "#1e1513",
@@ -106,14 +106,14 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         </div>
       </div>
 
-      {/* ── Info – fixed height, always the same ── */}
+      {/* ── Info – proportional to card, always same ratio ── */}
       <div style={{
-        flexShrink: 0,
-        height: "80px",
+        flex: "0 0 28%",
         padding: "10px 14px 12px",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        minHeight: 0,
       }}>
         <p style={{
           fontSize: "13px", fontWeight: 500, color: "#e8dbd8",

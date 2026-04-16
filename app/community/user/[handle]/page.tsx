@@ -319,6 +319,12 @@ export default function PublicUserProfilePage() {
   const [activeResourceColl, setActiveResourceColl] = useState<string | "all" | null>(null);
   const [newRcollName, setNewRcollName] = useState("");
   const [addingRcoll, setAddingRcoll] = useState(false);
+  const [showCreateCollModal, setShowCreateCollModal] = useState(false);
+  const [createCollName, setCreateCollName] = useState("");
+  const [createCollCoverFile, setCreateCollCoverFile] = useState<File | null>(null);
+  const [createCollCoverPreview, setCreateCollCoverPreview] = useState<string | null>(null);
+  const [createCollCropSrc, setCreateCollCropSrc] = useState<string | null>(null);
+  const createCollCoverInputRef = useRef<HTMLInputElement>(null);
   const [movingResourceScore, setMovingResourceScore] = useState<Score | null>(null);
   const [resourceScoreMenuId, setResourceScoreMenuId] = useState<string | null>(null);
   const [savedScoreMenuId, setSavedScoreMenuId] = useState<string | null>(null);
@@ -530,18 +536,32 @@ export default function PublicUserProfilePage() {
 
   // ─── Resource collection handlers ───────────────────────────────────────
   const handleCreateResourceColl = async () => {
-    if (!newRcollName.trim() || !currentUser) return;
+    if (!createCollName.trim() || !currentUser) return;
     setAddingRcoll(true);
     const supabase = createClient();
     const parentId = (activeResourceColl && activeResourceColl !== "all" && activeResourceColl !== "unsorted") ? activeResourceColl : null;
+
+    let coverUrl: string | null = null;
+    if (createCollCoverFile) {
+      const coverPath = `${currentUser.id}/collection-covers/${Date.now()}.jpg`;
+      const { error: storageErr } = await supabase.storage.from("avatars").upload(coverPath, createCollCoverFile, { upsert: true });
+      if (!storageErr) {
+        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(coverPath);
+        coverUrl = pub.publicUrl;
+      }
+    }
+
     const { data } = await supabase.from("resource_collections")
-      .insert({ user_id: currentUser.id, name: newRcollName.trim(), parent_id: parentId })
-      .select("id, name, parent_id").single();
+      .insert({ user_id: currentUser.id, name: createCollName.trim(), parent_id: parentId, cover_url: coverUrl })
+      .select("id, name, parent_id, cover_url").single();
     if (data) {
-      setResourceColls(prev => [...prev, { id: data.id, name: data.name, parent_id: data.parent_id ?? null, count: 0, covers: [] }]);
-      setNewRcollName("");
+      setResourceColls(prev => [...prev, { id: data.id, name: data.name, parent_id: data.parent_id ?? null, cover_url: data.cover_url ?? null, count: 0, covers: [] }]);
     }
     setAddingRcoll(false);
+    setShowCreateCollModal(false);
+    setCreateCollName("");
+    setCreateCollCoverFile(null);
+    setCreateCollCoverPreview(null);
   };
 
   const handleDeleteResourceColl = async (collId: string) => {
@@ -954,32 +974,46 @@ export default function PublicUserProfilePage() {
                   {/* Resources tab */}
                   {activeTab === "resources" && (
                     <div>
-                      {/* Breadcrumb when inside a collection */}
-                      {activeResourceColl !== null && (() => {
-                        const currentColl = resourceColls.find(c => c.id === activeResourceColl);
-                        const parentColl = currentColl?.parent_id ? resourceColls.find(c => c.id === currentColl.parent_id) : null;
-                        return (
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-                            <button onClick={() => {
-                              setActiveResourceColl(currentColl?.parent_id ?? null);
+                      {/* Breadcrumb + New button row */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                        {/* Breadcrumb */}
+                        {activeResourceColl !== null ? (() => {
+                          const currentColl = resourceColls.find(c => c.id === activeResourceColl);
+                          const parentColl = currentColl?.parent_id ? resourceColls.find(c => c.id === currentColl.parent_id) : null;
+                          return (
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <button onClick={() => setActiveResourceColl(currentColl?.parent_id ?? null)}
+                                style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
+                                {parentColl ? parentColl.name : "Collections"}
+                              </button>
+                              {parentColl && (<><span style={{ fontSize: "13px", color: "#3d2d2b" }}>/</span><span style={{ fontSize: "13px", color: "#6b5452" }}>{parentColl.name}</span></>)}
+                              <span style={{ fontSize: "13px", color: "#3d2d2b" }}>/</span>
+                              <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
+                                {activeResourceColl === "all" ? "All resources" : activeResourceColl === "unsorted" ? "Unsorted" : currentColl?.name}
+                              </span>
+                            </div>
+                          );
+                        })() : <div />}
+
+                        {/* New collection / folder button */}
+                        {isOwner && userScores.length > 0 && activeResourceColl !== "all" && activeResourceColl !== "unsorted" && (
+                          <button
+                            onClick={() => setShowCreateCollModal(true)}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "6px",
+                              padding: "7px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 500,
+                              background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
+                              color: "#c8b8b6", cursor: "pointer",
                             }}
-                              style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
-                              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
-                              {parentColl ? parentColl.name : "Collections"}
-                            </button>
-                            {parentColl && (
-                              <>
-                                <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
-                                <span style={{ fontSize: "13px", color: "#6b5452" }}>Collections</span>
-                              </>
-                            )}
-                            <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
-                            <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
-                              {activeResourceColl === "all" ? "All resources" : activeResourceColl === "unsorted" ? "Unsorted" : currentColl?.name}
-                            </span>
-                          </div>
-                        );
-                      })()}
+                          >
+                            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            {activeResourceColl === null ? "New collection" : "New folder"}
+                          </button>
+                        )}
+                      </div>
 
                       {/* Collection overview */}
                       {activeResourceColl === null && (
@@ -1017,67 +1051,9 @@ export default function PublicUserProfilePage() {
                             </div>
                           )}
 
-                          {/* Create collection (owner only) */}
-                          {isOwner && userScores.length > 0 && (
-                            <div style={{ marginTop: "20px", display: "flex", gap: "8px", maxWidth: "340px" }}>
-                              <input
-                                type="text"
-                                placeholder="New collection name…"
-                                value={newRcollName}
-                                onChange={e => setNewRcollName(e.target.value)}
-                                onKeyDown={e => { if (e.key === "Enter") handleCreateResourceColl(); }}
-                                style={{
-                                  flex: 1, padding: "8px 12px", borderRadius: "8px",
-                                  background: "#1e1513", border: "1px solid rgba(255,255,255,0.1)",
-                                  color: "#fff", fontSize: "13px", outline: "none",
-                                }}
-                              />
-                              <button
-                                onClick={handleCreateResourceColl}
-                                disabled={!newRcollName.trim() || addingRcoll}
-                                style={{
-                                  padding: "8px 16px", borderRadius: "8px", background: "#fff",
-                                  color: "#211817", fontSize: "13px", fontWeight: 600,
-                                  border: "none", cursor: "pointer",
-                                  opacity: !newRcollName.trim() || addingRcoll ? 0.5 : 1,
-                                }}
-                              >
-                                + Create
-                              </button>
-                            </div>
-                          )}
                         </>
                       )}
 
-                      {/* Create folder (owner only, inside a real collection) */}
-                      {activeResourceColl !== null && activeResourceColl !== "all" && activeResourceColl !== "unsorted" && isOwner && (
-                        <div style={{ marginTop: "20px", display: "flex", gap: "8px", maxWidth: "340px" }}>
-                          <input
-                            type="text"
-                            placeholder="New folder name…"
-                            value={newRcollName}
-                            onChange={e => setNewRcollName(e.target.value)}
-                            onKeyDown={e => { if (e.key === "Enter") handleCreateResourceColl(); }}
-                            style={{
-                              flex: 1, padding: "8px 12px", borderRadius: "8px",
-                              background: "#1e1513", border: "1px solid rgba(255,255,255,0.1)",
-                              color: "#fff", fontSize: "13px", outline: "none",
-                            }}
-                          />
-                          <button
-                            onClick={handleCreateResourceColl}
-                            disabled={!newRcollName.trim() || addingRcoll}
-                            style={{
-                              padding: "8px 16px", borderRadius: "8px", background: "#fff",
-                              color: "#211817", fontSize: "13px", fontWeight: 600,
-                              border: "none", cursor: "pointer",
-                              opacity: !newRcollName.trim() || addingRcoll ? 0.5 : 1,
-                            }}
-                          >
-                            + Folder
-                          </button>
-                        </div>
-                      )}
 
                       {/* Scores inside a collection */}
                       {activeResourceColl !== null && (() => {
@@ -1502,6 +1478,105 @@ export default function PublicUserProfilePage() {
           imageSrc={collCoverCropSrc}
           onConfirm={handleCollCoverCropConfirm}
           onCancel={() => { setCollCoverCropSrc(null); setCollCoverCropId(null); }}
+        />
+      )}
+
+      {/* Create collection / folder modal */}
+      {showCreateCollModal && (
+        <div
+          onClick={() => { setShowCreateCollModal(false); setCreateCollName(""); setCreateCollCoverFile(null); setCreateCollCoverPreview(null); }}
+          style={{ position: "fixed", inset: 0, zIndex: 110, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "18px", padding: "28px 24px", width: "100%", maxWidth: "380px",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", gap: "14px",
+          }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontFamily: "Georgia, serif", fontSize: "18px", color: "#fff", fontWeight: 400, margin: 0 }}>
+                {activeResourceColl && activeResourceColl !== "all" && activeResourceColl !== "unsorted" ? "New folder" : "New collection"}
+              </h3>
+              <button onClick={() => { setShowCreateCollModal(false); setCreateCollName(""); setCreateCollCoverFile(null); setCreateCollCoverPreview(null); }}
+                style={{ color: "#6b5452", fontSize: "22px", background: "none", border: "none", cursor: "pointer", lineHeight: 1 }}>×</button>
+            </div>
+
+            {/* Name input */}
+            <input
+              autoFocus
+              type="text"
+              placeholder="Name…"
+              value={createCollName}
+              onChange={e => setCreateCollName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && createCollName.trim()) handleCreateResourceColl(); }}
+              style={{
+                width: "100%", padding: "10px 14px", borderRadius: "9px",
+                background: "#1e1513", border: "1px solid rgba(255,255,255,0.12)",
+                color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box",
+              }}
+            />
+
+            {/* Cover upload */}
+            <div>
+              <p style={{ fontSize: "12px", color: "#6b5452", margin: "0 0 8px" }}>Cover image (optional)</p>
+              {createCollCoverPreview ? (
+                <div style={{ position: "relative", borderRadius: "10px", overflow: "hidden", aspectRatio: "1/1", marginBottom: "8px" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={createCollCoverPreview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button
+                    onClick={() => { setCreateCollCoverFile(null); setCreateCollCoverPreview(null); }}
+                    style={{ position: "absolute", top: "8px", right: "8px", width: "26px", height: "26px", borderRadius: "6px", background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", cursor: "pointer", fontSize: "16px", lineHeight: 1 }}
+                  >×</button>
+                </div>
+              ) : (
+                <label style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  padding: "10px 14px", borderRadius: "9px", cursor: "pointer",
+                  background: "#1e1513", border: "1px dashed rgba(255,255,255,0.12)",
+                  fontSize: "13px", color: "#6b5452",
+                }}>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  Choose cover image…
+                  <input ref={createCollCoverInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    const src = URL.createObjectURL(f);
+                    setCreateCollCropSrc(src);
+                    e.target.value = "";
+                  }} />
+                </label>
+              )}
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => { setShowCreateCollModal(false); setCreateCollName(""); setCreateCollCoverFile(null); setCreateCollCoverPreview(null); }}
+                style={{ flex: 1, padding: "10px", borderRadius: "9px", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#a89690", fontSize: "13px", cursor: "pointer" }}
+              >Cancel</button>
+              <button
+                onClick={handleCreateResourceColl}
+                disabled={!createCollName.trim() || addingRcoll}
+                style={{ flex: 2, padding: "10px", borderRadius: "9px", background: "#fff", color: "#211817", fontSize: "13px", fontWeight: 600, border: "none", cursor: "pointer", opacity: !createCollName.trim() || addingRcoll ? 0.5 : 1 }}
+              >{addingRcoll ? "Creating…" : "Create"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cover cropper for new collection */}
+      {createCollCropSrc && (
+        <CoverCropper
+          imageSrc={createCollCropSrc}
+          onConfirm={blob => {
+            const file = new File([blob], "cover.jpg", { type: "image/jpeg" });
+            setCreateCollCoverFile(file);
+            setCreateCollCoverPreview(URL.createObjectURL(blob));
+            setCreateCollCropSrc(null);
+          }}
+          onCancel={() => setCreateCollCropSrc(null)}
         />
       )}
       {showMessageModal && currentUser && profileUser && (

@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/supabase/useAuth";
 import { useNotifications, NotificationItem } from "@/lib/supabase/useNotifications";
 import AuthModal from "@/components/community/AuthModal";
 import AccountSettingsModal from "@/components/community/AccountSettingsModal";
+import SupportModal from "@/components/app/SupportModal";
 import { createClient } from "@/lib/supabase/client";
 
 const navLinks = [
@@ -55,6 +56,7 @@ export default function Navbar() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUserDrop, setShowUserDrop] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
   const router = useRouter();
@@ -259,16 +261,15 @@ export default function Navbar() {
                             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
                             Settings
                           </button>
-                          <a
-                            href="mailto:support@scoresynth.com"
-                            onClick={() => setShowUserDrop(false)}
-                            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", background: "none", color: "#e8dbd8", fontSize: "13px", width: "100%", textDecoration: "none", transition: "background 0.13s" }}
+                          <button
+                            onClick={() => { setShowSupport(true); setShowUserDrop(false); }}
+                            style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#e8dbd8", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s" }}
                             onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
                             onMouseLeave={e => (e.currentTarget.style.background = "none")}
                           >
-                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>
+                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>
                             Get support
-                          </a>
+                          </button>
                         </div>
 
                         <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "5px" }}>
@@ -599,6 +600,9 @@ export default function Navbar() {
       )}
       {showAccountSettings && (
         <AccountSettingsModal onClose={() => setShowAccountSettings(false)} />
+      )}
+      {showSupport && user && (
+        <SupportModal userEmail={user.email ?? ""} onClose={() => setShowSupport(false)} />
       )}
     </>
   );

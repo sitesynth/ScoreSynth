@@ -15,10 +15,22 @@ export default function ContactPage() {
     interest: "",
     message: "",
   });
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert("Thanks! We'll be in touch soon.");
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error();
+      setStatus("sent");
+    } catch {
+      setStatus("error");
+    }
   };
 
   const inputStyle: React.CSSProperties = {
@@ -65,19 +77,50 @@ export default function ContactPage() {
               lineHeight: 1.1, fontWeight: 400,
               color: "#fff", marginBottom: "16px",
             }}>
-              Contact our sales team
+              Get in touch
             </h1>
             <p style={{ fontSize: "15px", color: "#a89690", lineHeight: 1.6, marginBottom: "48px" }}>
-              Get started today with ScoreSynth
+              Questions, partnerships, or just want to say hi — we&apos;d love to hear from you.
             </p>
 
-            <div style={{ position: "relative", width: "100%", maxWidth: "320px" }}>
+            <style>{`
+              @keyframes floatClef {
+                0%   { transform: translateY(0px) rotate(0deg);   }
+                30%  { transform: translateY(-14px) rotate(-2deg); }
+                60%  { transform: translateY(-8px) rotate(1.5deg); }
+                100% { transform: translateY(0px) rotate(0deg);   }
+              }
+              @keyframes floatNote {
+                0%   { transform: translateY(0px) rotate(0deg);    }
+                40%  { transform: translateY(-20px) rotate(5deg);  }
+                70%  { transform: translateY(-10px) rotate(-3deg); }
+                100% { transform: translateY(0px) rotate(0deg);    }
+              }
+            `}</style>
+
+            <div style={{ position: "relative", width: "100%", maxWidth: "320px", height: "300px" }}>
               <Image
-                src="/assets/contactsalesimage.svg"
-                alt="Contact Sales"
-                width={320}
-                height={380}
-                style={{ width: "100%", height: "auto", opacity: 0.9 }}
+                src="/assets/contactsales-clef.svg"
+                alt="Treble Clef"
+                width={429}
+                height={398}
+                style={{
+                  width: "100%", height: "100%", objectFit: "contain", opacity: 0.9,
+                  position: "absolute", inset: 0,
+                  animation: "floatClef 5.5s ease-in-out infinite",
+                }}
+              />
+              <Image
+                src="/assets/contactsales-note.svg"
+                alt="Music Note"
+                width={429}
+                height={398}
+                style={{
+                  width: "100%", height: "100%", objectFit: "contain", opacity: 0.9,
+                  position: "absolute", inset: 0,
+                  animation: "floatNote 4s ease-in-out infinite",
+                  animationDelay: "0.8s",
+                }}
               />
             </div>
           </div>
@@ -197,21 +240,42 @@ export default function ContactPage() {
               </div>
 
               {/* Submit */}
-              <button
-                type="submit"
-                style={{
-                  width: "100%", padding: "13px",
-                  borderRadius: "10px",
-                  fontSize: "13px", fontWeight: 600,
-                  background: "#fff", color: "#211817",
-                  cursor: "pointer", border: "none",
-                  transition: "opacity 0.15s",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
-                onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-              >
-                Get in touch
-              </button>
+              {status === "sent" ? (
+                <div style={{
+                  textAlign: "center", padding: "14px",
+                  borderRadius: "10px", background: "rgba(39,174,96,0.12)",
+                  border: "1px solid rgba(39,174,96,0.3)",
+                  color: "#5dce8a", fontSize: "14px", fontWeight: 500,
+                }}>
+                  ✓ Message sent — we&apos;ll get back to you soon!
+                </div>
+              ) : (
+                <>
+                  {status === "error" && (
+                    <p style={{ fontSize: "12px", color: "#e87060", textAlign: "center", margin: 0 }}>
+                      Something went wrong. Please email us at support@scoresynth.com
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={status === "sending"}
+                    style={{
+                      width: "100%", padding: "13px",
+                      borderRadius: "10px",
+                      fontSize: "13px", fontWeight: 600,
+                      background: "#fff", color: "#211817",
+                      cursor: status === "sending" ? "default" : "pointer",
+                      border: "none",
+                      transition: "opacity 0.15s",
+                      opacity: status === "sending" ? 0.6 : 1,
+                    }}
+                    onMouseEnter={e => { if (status !== "sending") e.currentTarget.style.opacity = "0.88"; }}
+                    onMouseLeave={e => { if (status !== "sending") e.currentTarget.style.opacity = "1"; }}
+                  >
+                    {status === "sending" ? "Sending…" : "Send message"}
+                  </button>
+                </>
+              )}
 
             </form>
           </div>

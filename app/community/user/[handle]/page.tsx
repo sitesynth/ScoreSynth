@@ -312,6 +312,8 @@ export default function PublicUserProfilePage() {
   const [collCoverCropId, setCollCoverCropId] = useState<string | null>(null);
   const [newCollName, setNewCollName] = useState("");
   const [addingColl, setAddingColl] = useState(false);
+  const [showCreateSavedCollModal, setShowCreateSavedCollModal] = useState(false);
+  const [createSavedCollName, setCreateSavedCollName] = useState("");
   const [movingScore, setMovingScore] = useState<Score | null>(null);
 
   // Resource collections state
@@ -502,17 +504,18 @@ export default function PublicUserProfilePage() {
   };
 
   const handleCreateCollection = async () => {
-    if (!newCollName.trim() || !currentUser) return;
+    if (!createSavedCollName.trim() || !currentUser) return;
     setAddingColl(true);
     const supabase = createClient();
     const { data } = await supabase.from("collections")
-      .insert({ user_id: currentUser.id, name: newCollName.trim() })
+      .insert({ user_id: currentUser.id, name: createSavedCollName.trim() })
       .select("id, name").single();
     if (data) {
       setCollections(prev => [...prev, { id: data.id, name: data.name, parent_id: null, count: 0, covers: [] }]);
-      setNewCollName("");
     }
     setAddingColl(false);
+    setShowCreateSavedCollModal(false);
+    setCreateSavedCollName("");
   };
 
   const handleDeleteCollection = async (collId: string) => {
@@ -1255,20 +1258,38 @@ export default function PublicUserProfilePage() {
                   {/* Saved tab */}
                   {activeTab === "saved" && (
                     <div>
-                      {/* Sub-navigation when a collection is open */}
-                      {activeCollection !== null && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-                          <button onClick={() => setActiveCollection(null)}
-                            style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
-                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
-                            Collections
+                      {/* Breadcrumb + New collection button */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                        {activeCollection !== null ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <button onClick={() => setActiveCollection(null)}
+                              style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
+                              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
+                              Collections
+                            </button>
+                            <span style={{ fontSize: "13px", color: "#3d2d2b" }}>/</span>
+                            <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
+                              {activeCollection === "all" ? "All saved" : activeCollection === "unsorted" ? "Unsorted" : collections.find(c => c.id === activeCollection)?.name}
+                            </span>
+                          </div>
+                        ) : <div />}
+                        {isOwner && activeCollection === null && (
+                          <button
+                            onClick={() => setShowCreateSavedCollModal(true)}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "6px",
+                              padding: "7px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 500,
+                              background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)",
+                              color: "#c8b8b6", cursor: "pointer",
+                            }}
+                          >
+                            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            New collection
                           </button>
-                          <span style={{ fontSize: "13px", color: "#6b5452" }}>/</span>
-                          <span style={{ fontSize: "13px", color: "#e8dbd8" }}>
-                            {activeCollection === "all" ? "All saved" : activeCollection === "unsorted" ? "Unsorted" : collections.find(c => c.id === activeCollection)?.name}
-                          </span>
-                        </div>
-                      )}
+                        )}
+                      </div>
 
                       {/* Collection overview */}
                       {activeCollection === null && (
@@ -1302,34 +1323,6 @@ export default function PublicUserProfilePage() {
                             </div>
                           )}
 
-                          {/* Create collection (owner) */}
-                          {isOwner && (
-                            <div style={{ marginTop: "20px", display: "flex", gap: "8px", maxWidth: "340px" }}>
-                              <input
-                                type="text"
-                                placeholder="New collection name…"
-                                value={newCollName}
-                                onChange={e => setNewCollName(e.target.value)}
-                                onKeyDown={e => { if (e.key === "Enter") handleCreateCollection(); }}
-                                style={{
-                                  flex: 1, padding: "8px 12px", borderRadius: "8px",
-                                  background: "#1e1513", border: "1px solid rgba(255,255,255,0.1)",
-                                  color: "#fff", fontSize: "13px", outline: "none",
-                                }}
-                              />
-                              <button
-                                onClick={handleCreateCollection}
-                                disabled={!newCollName.trim() || addingColl}
-                                style={{
-                                  padding: "8px 16px", borderRadius: "8px", background: "#fff",
-                                  color: "#211817", fontSize: "13px", fontWeight: 600,
-                                  border: "none", cursor: "pointer",
-                                }}
-                              >
-                                + Create
-                              </button>
-                            </div>
-                          )}
                         </>
                       )}
 
@@ -1569,6 +1562,50 @@ export default function PublicUserProfilePage() {
                 disabled={!createCollName.trim() || addingRcoll}
                 style={{ flex: 2, padding: "10px", borderRadius: "9px", background: "#fff", color: "#211817", fontSize: "13px", fontWeight: 600, border: "none", cursor: "pointer", opacity: !createCollName.trim() || addingRcoll ? 0.5 : 1 }}
               >{addingRcoll ? "Creating…" : "Create"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create saved collection modal */}
+      {showCreateSavedCollModal && (
+        <div
+          onClick={() => { setShowCreateSavedCollModal(false); setCreateSavedCollName(""); }}
+          style={{ position: "fixed", inset: 0, zIndex: 110, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "18px", padding: "28px 24px", width: "100%", maxWidth: "380px",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.7)", display: "flex", flexDirection: "column", gap: "14px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ fontFamily: "Georgia, serif", fontSize: "18px", color: "#fff", fontWeight: 400, margin: 0 }}>New collection</h3>
+              <button onClick={() => { setShowCreateSavedCollModal(false); setCreateSavedCollName(""); }}
+                style={{ color: "#6b5452", fontSize: "22px", background: "none", border: "none", cursor: "pointer", lineHeight: 1 }}>×</button>
+            </div>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Name…"
+              value={createSavedCollName}
+              onChange={e => setCreateSavedCollName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && createSavedCollName.trim()) handleCreateCollection(); }}
+              style={{
+                width: "100%", padding: "10px 14px", borderRadius: "9px",
+                background: "#1e1513", border: "1px solid rgba(255,255,255,0.12)",
+                color: "#fff", fontSize: "14px", outline: "none", boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                onClick={() => { setShowCreateSavedCollModal(false); setCreateSavedCollName(""); }}
+                style={{ flex: 1, padding: "10px", borderRadius: "9px", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#a89690", fontSize: "13px", cursor: "pointer" }}
+              >Cancel</button>
+              <button
+                onClick={handleCreateCollection}
+                disabled={!createSavedCollName.trim() || addingColl}
+                style={{ flex: 2, padding: "10px", borderRadius: "9px", background: "#fff", color: "#211817", fontSize: "13px", fontWeight: 600, border: "none", cursor: "pointer", opacity: !createSavedCollName.trim() || addingColl ? 0.5 : 1 }}
+              >{addingColl ? "Creating…" : "Create"}</button>
             </div>
           </div>
         </div>

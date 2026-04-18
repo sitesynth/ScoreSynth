@@ -686,12 +686,13 @@ export default function PublicUserProfilePage() {
         ) : (
           <>
             {/* Banner */}
-            <div style={{
-              position: "relative", height: "160px",
-              background: bannerImageUrl ? "none" : bannerGradient,
-              backgroundImage: bannerImageUrl ? `url(${bannerImageUrl})` : undefined,
-              backgroundSize: "cover", backgroundPosition: "center",
-            }}>
+            <div
+              className="profile-banner"
+              style={{
+                background: bannerImageUrl ? "none" : bannerGradient,
+                backgroundImage: bannerImageUrl ? `url(${bannerImageUrl})` : undefined,
+              }}
+            >
               {isOwner && (
                 <>
                   <input
@@ -775,9 +776,9 @@ export default function PublicUserProfilePage() {
               )}
             </div>
 
-            <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 32px 80px" }}>
+            <div className="profile-wrap">
               {/* Avatar + actions row */}
-              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: "-48px", marginBottom: "20px" }}>
+              <div className="profile-avatar-row">
                 {/* Avatar */}
                 <div style={{ position: "relative" }}>
                   <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: "none" }}
@@ -815,7 +816,7 @@ export default function PublicUserProfilePage() {
                 </div>
 
                 {/* Action buttons */}
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <div className="profile-action-btns">
                   {isOwner ? (
                     <>
                       <button
@@ -883,9 +884,9 @@ export default function PublicUserProfilePage() {
               </div>
 
               {/* Two-column layout */}
-              <div style={{ display: "flex", gap: "48px" }}>
+              <div className="profile-two-col">
                 {/* Left sidebar */}
-                <div style={{ width: "220px", flexShrink: 0 }}>
+                <div className="profile-sidebar">
                   {isOwner ? (
                     <>
                       <div style={{ marginBottom: "2px" }}>
@@ -958,7 +959,7 @@ export default function PublicUserProfilePage() {
                 </div>
 
                 {/* Right: tabs + content */}
-                <div style={{ flex: 1 }}>
+                <div className="profile-content">
                   {/* Tabs */}
                   <div style={{ display: "flex", gap: "4px", marginBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                     {([
@@ -1032,7 +1033,7 @@ export default function PublicUserProfilePage() {
                           {userScores.length === 0 ? (
                             <p style={{ fontSize: "13px", color: "#6b5452" }}>No resources published yet.</p>
                           ) : (
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                            <div className="scores-grid">
                               {/* "All resources" card */}
                               <CollectionCard
                                 coll={{ id: "all", name: "All resources", count: userScores.length, covers: userScores.slice(0, 4).map(s => s.cover_url ?? null), parent_id: null }}
@@ -1081,7 +1082,7 @@ export default function PublicUserProfilePage() {
                             {subFolders.length > 0 && (
                               <div style={{ marginBottom: "20px" }}>
                                 <p style={{ fontSize: "11px", color: "#6b5452", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "10px" }}>Folders</p>
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                                <div className="scores-grid">
                                   {subFolders.map(c => (
                                     <CollectionCard
                                       key={c.id} coll={c}
@@ -1096,7 +1097,7 @@ export default function PublicUserProfilePage() {
                               </div>
                             )}
                             {visible.length > 0 ? (
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}
+                          <div className="scores-grid"
                             onClick={() => resourceScoreMenuId && setResourceScoreMenuId(null)}>
                             {visible.map(s => (
                               <div key={s.id} style={{ position: "relative", minWidth: 0 }}>
@@ -1297,7 +1298,7 @@ export default function PublicUserProfilePage() {
                           {savedScores.length === 0 ? (
                             <p style={{ fontSize: "13px", color: "#6b5452" }}>No saved scores yet.</p>
                           ) : (
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                            <div className="scores-grid">
                               {/* "All saved" card */}
                               <CollectionCard
                                 coll={{ id: "all", name: "All saved", count: savedScores.length, covers: savedScores.slice(0, 4).map(s => s.cover_url ?? null), parent_id: null }}
@@ -1329,7 +1330,7 @@ export default function PublicUserProfilePage() {
                       {/* Scores inside a collection */}
                       {activeCollection !== null && (
                         visibleSaved.length > 0 ? (
-                          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}
+                          <div className="scores-grid"
                             onClick={() => savedScoreMenuId && setSavedScoreMenuId(null)}>
                             {visibleSaved.map(s => (
                               <div key={s.id} style={{ position: "relative", minWidth: 0 }}>

@@ -90,7 +90,7 @@ export default function CommunityPage() {
       <main style={{ paddingTop: "80px", background: "#211817", minHeight: "100vh" }}>
 
         {/* Hero + Search */}
-        <section style={{ textAlign: "center", padding: "64px 32px 40px" }}>
+        <section style={{ textAlign: "center", padding: "48px 20px 36px" }} className="mob-px">
           <h1 style={{
             fontFamily: "Georgia, serif", fontSize: "clamp(28px, 4vw, 44px)",
             color: "#fff", lineHeight: 1.2, maxWidth: "620px", margin: "0 auto 12px"
@@ -216,7 +216,7 @@ export default function CommunityPage() {
                   <p style={{ fontSize: "13px", color: "#6b5452" }}>Try a different search or browse categories below.</p>
                 </div>
               ) : (
-                <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                <div className="mob-2col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
                   {filteredScores.map(s => <ScoreCard key={s.id} score={s} />)}
                 </div>
               )}
@@ -234,7 +234,7 @@ export default function CommunityPage() {
                 {loading ? (
                   <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
                 ) : (
-                  <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                  <div className="mob-2col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
                     {pianoScores.map(s => <ScoreCard key={s.id} score={s} />)}
                   </div>
                 )}
@@ -292,7 +292,7 @@ export default function CommunityPage() {
                 {loading ? (
                   <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
                 ) : (
-                  <div className="mob-1col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                  <div className="mob-2col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
                     {brassScores.map(s => <ScoreCard key={s.id} score={s} />)}
                   </div>
                 )}

@@ -120,8 +120,7 @@ export default function Navbar() {
         background: "rgba(33,24,23,0.88)",
         backdropFilter: "blur(12px)",
         borderBottom: "1px solid rgba(255,255,255,0.06)",
-        padding: "0 32px",
-      }}>
+      }} className="nav-bar">
         {/* Inner container aligned to content grid */}
         <div style={{
           maxWidth: "1100px", margin: "0 auto", height: "100%",
@@ -478,117 +477,200 @@ export default function Navbar() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div style={{
-          position: "fixed", top: "64px", left: 0, right: 0, zIndex: 49,
-          background: "rgba(33,24,23,0.97)",
+          position: "fixed", top: "64px", left: 0, right: 0, bottom: 0, zIndex: 49,
+          background: "rgba(33,24,23,0.98)",
           backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-          padding: "8px 24px 28px",
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          overflowY: "auto",
           display: "flex", flexDirection: "column",
         }}>
-          {navLinks.map((l) => (
+          <div style={{ padding: "0 20px 32px", display: "flex", flexDirection: "column", flex: 1 }}>
+
+            {/* ── Logged-in user identity ── */}
+            {user && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: "12px",
+                padding: "16px 0 14px",
+                borderBottom: "1px solid rgba(255,255,255,0.07)",
+                marginBottom: "4px",
+              }}>
+                <div style={{
+                  width: "48px", height: "48px", borderRadius: "50%",
+                  background: "#c0392b", flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "16px", fontWeight: 700, color: "#fff", overflow: "hidden",
+                }}>
+                  {avatarUrl
+                    ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : initials}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: "15px", fontWeight: 600, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {displayName || handle || ""}
+                  </p>
+                  <p style={{ fontSize: "12px", color: "#6b5452", margin: "1px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {handle ? `@${handle}` : user?.email}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ── Nav links ── */}
+            {navLinks.map((l) => (
+              <Link
+                key={l.label}
+                href={l.href}
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  fontSize: "15px", color: "#a89690",
+                  padding: "13px 0",
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  textDecoration: "none", display: "block",
+                }}
+              >
+                {l.label}
+              </Link>
+            ))}
+
+            {/* ── Contact ── */}
             <Link
-              key={l.label}
-              href={l.href}
+              href="/contact"
               onClick={() => setMobileOpen(false)}
               style={{
-                fontSize: "15px", color: "#a89690",
-                padding: "14px 0",
-                borderBottom: "1px solid rgba(255,255,255,0.05)",
-                textDecoration: "none",
+                display: "block", marginTop: "12px",
+                padding: "12px 16px", borderRadius: "10px",
+                border: "1px solid rgba(255,255,255,0.18)",
+                color: "#e8dbd8", fontSize: "14px", fontWeight: 500,
+                textAlign: "center", textDecoration: "none",
+                background: "transparent",
               }}
             >
-              {l.label}
+              Contact us
             </Link>
-          ))}
-          <Link
-            href="/contact"
-            onClick={() => setMobileOpen(false)}
-            style={{
-              display: "block", marginTop: "16px",
-              padding: "12px 16px", borderRadius: "10px",
-              border: "1px solid rgba(255,255,255,0.24)",
-              color: "#e8dbd8",
-              fontSize: "14px", fontWeight: 600,
-              textAlign: "center", textDecoration: "none",
-              background: "transparent",
-            }}
-          >
-            Contact sales
-          </Link>
-          {user ? (
-            <>
-              <Link
-                href="/community/notifications"
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "10px",
-                  fontSize: "15px", color: "#a89690",
-                  padding: "14px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                  textDecoration: "none",
-                  position: "relative",
-                }}
-              >
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                  <path d="M13.73 21a2 2 0 01-3.46 0"/>
-                </svg>
-                Notifications
-                {unreadCount > 0 && (
-                  <span style={{
-                    marginLeft: "auto",
-                    background: "#c0392b", color: "#fff",
-                    fontSize: "11px", fontWeight: 700,
-                    padding: "2px 6px", borderRadius: "10px",
-                    fontFamily: "Arial, sans-serif",
-                  }}>{unreadCount}</span>
-                )}
-              </Link>
-              <Link
-                href={handle ? `/community/user/${handle}` : "/community"}
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  display: "block", marginTop: "10px",
-                  padding: "13px 16px", borderRadius: "10px",
-                  background: "#fff", color: "#211817",
-                  fontSize: "14px", fontWeight: 600,
-                  textAlign: "center", textDecoration: "none",
-                }}
-              >
-                My Profile
-              </Link>
+
+            {user ? (
+              <>
+                {/* ── Account actions ── */}
+                <div style={{
+                  marginTop: "14px",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                }}>
+                  {/* My Profile */}
+                  <Link
+                    href={handle ? `/community/user/${handle}` : "/community"}
+                    onClick={() => setMobileOpen(false)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "10px",
+                      padding: "13px 16px", color: "#e8dbd8", fontSize: "14px",
+                      textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                    </svg>
+                    My profile
+                  </Link>
+
+                  {/* Notifications */}
+                  <Link
+                    href="/community/notifications"
+                    onClick={() => setMobileOpen(false)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "10px",
+                      padding: "13px 16px", color: "#e8dbd8", fontSize: "14px",
+                      textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      position: "relative",
+                    }}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                      <path d="M13.73 21a2 2 0 01-3.46 0"/>
+                    </svg>
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span style={{
+                        marginLeft: "auto",
+                        background: "#c0392b", color: "#fff",
+                        fontSize: "11px", fontWeight: 700,
+                        padding: "2px 7px", borderRadius: "10px",
+                      }}>{unreadCount}</span>
+                    )}
+                  </Link>
+
+                  {/* Settings */}
+                  <button
+                    onClick={() => { setMobileOpen(false); setShowAccountSettings(true); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "10px",
+                      width: "100%", padding: "13px 16px",
+                      background: "none", border: "none", borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      color: "#e8dbd8", fontSize: "14px", cursor: "pointer", textAlign: "left",
+                    }}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+                    </svg>
+                    Settings
+                  </button>
+
+                  {/* Get support */}
+                  <button
+                    onClick={() => { setMobileOpen(false); setShowSupport(true); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "10px",
+                      width: "100%", padding: "13px 16px",
+                      background: "none", border: "none",
+                      color: "#e8dbd8", fontSize: "14px", cursor: "pointer", textAlign: "left",
+                    }}
+                  >
+                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                      <path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/>
+                    </svg>
+                    Get support
+                  </button>
+                </div>
+
+                {/* ── Log out ── */}
+                <button
+                  onClick={async () => {
+                    const supabase = createClient();
+                    await supabase.auth.signOut();
+                    setMobileOpen(false);
+                    router.push("/");
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                    width: "100%", marginTop: "10px",
+                    padding: "13px 16px", borderRadius: "10px",
+                    background: "rgba(192,57,43,0.1)", color: "#e87060",
+                    fontSize: "14px", fontWeight: 500,
+                    border: "1px solid rgba(192,57,43,0.2)", cursor: "pointer",
+                  }}
+                >
+                  <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  Log out
+                </button>
+              </>
+            ) : (
               <button
-                onClick={async () => {
-                  const supabase = createClient();
-                  await supabase.auth.signOut();
-                  setMobileOpen(false);
-                  router.push("/");
-                }}
+                onClick={() => { setMobileOpen(false); setShowAuth(true); }}
                 style={{
-                  display: "block", width: "100%", marginTop: "8px",
-                  padding: "13px 16px", borderRadius: "10px",
-                  background: "rgba(192,57,43,0.12)", color: "#e87060",
-                  fontSize: "14px", fontWeight: 600,
+                  display: "block", width: "100%", marginTop: "12px",
+                  padding: "14px 16px", borderRadius: "10px",
+                  background: "#fff", color: "#211817",
+                  fontSize: "15px", fontWeight: 600,
                   textAlign: "center", border: "none", cursor: "pointer",
                 }}
               >
-                Log out
+                Join Free
               </button>
-            </>
-          ) : (
-            <button
-              onClick={() => { setMobileOpen(false); setShowAuth(true); }}
-              style={{
-                display: "block", width: "100%", marginTop: "10px",
-                padding: "13px 16px", borderRadius: "10px",
-                background: "#fff", color: "#211817",
-                fontSize: "14px", fontWeight: 600,
-                textAlign: "center", border: "none", cursor: "pointer",
-              }}
-            >
-              Join Free
-            </button>
-          )}
+            )}
+          </div>
         </div>
       )}
       {showAuth && (

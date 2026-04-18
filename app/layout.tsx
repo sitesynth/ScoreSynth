@@ -9,9 +9,40 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ScoreSynth — AI Music Transcription & Orchestration",
+  title: "ScoreSynth — Sheet Music Library & Community",
   description:
-    "Transform any audio into professionally arranged orchestral scores. Upload MP3, WAV, MIDI, or sheet music and get ready-to-use scores in seconds.",
+    "Discover, upload and share classical sheet music. Browse piano, strings, chamber, orchestral scores and more. Free and premium scores from musicians worldwide.",
+  metadataBase: new URL("https://scoresynth.com"),
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico" },
+    ],
+    apple: "/icon.svg",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://scoresynth.com",
+    title: "ScoreSynth — Sheet Music Library & Community",
+    description:
+      "Discover, upload and share classical sheet music. Browse piano, strings, chamber, orchestral scores and more.",
+    siteName: "ScoreSynth",
+    images: [
+      {
+        url: "/logos/logo-scoresynth.svg",
+        width: 1200,
+        height: 630,
+        alt: "ScoreSynth",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ScoreSynth — Sheet Music Library & Community",
+    description:
+      "Discover, upload and share classical sheet music. Free and premium scores from musicians worldwide.",
+    images: ["/logos/logo-scoresynth.svg"],
+  },
 };
 
 export default function RootLayout({

@@ -1451,9 +1451,23 @@ export default function PublicUserProfilePage() {
             if (!handle || !profileUser) return;
             const supabase = createClient();
             supabase.from("scores")
-              .select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at, cover_url")
+              .select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at, cover_url, resource_collection_id")
               .eq("author_id", profileUser.id).order("likes_count", { ascending: false })
-              .then(({ data }) => setUserScores((data as Score[]) ?? []));
+              .then(({ data }) => {
+                const scores = (data as Score[]) ?? [];
+                setUserScores(scores);
+                // Recalculate collection counts & covers
+                setResourceColls(prev => prev.map(c => {
+                  const getAllDescendantIds = (id: string): string[] => {
+                    const children = prev.filter(x => x.parent_id === id);
+                    return [id, ...children.flatMap(x => getAllDescendantIds(x.id))];
+                  };
+                  const allIds = getAllDescendantIds(c.id);
+                  const collScores = scores.filter(s => s.resource_collection_id && allIds.includes(s.resource_collection_id));
+                  const directScores = scores.filter(s => s.resource_collection_id === c.id);
+                  return { ...c, count: collScores.length, covers: directScores.slice(0, 4).map(s => s.cover_url ?? null) };
+                }));
+              });
           }}
         />
       )}

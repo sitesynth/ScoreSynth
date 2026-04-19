@@ -29,6 +29,16 @@ async function pickUniqueHandle(
   return `${base.slice(0, 20)}_${Date.now().toString(36).slice(-9)}`.slice(0, 30);
 }
 
+function isFreshGoogleSignup(user: {
+  app_metadata?: { provider?: string };
+  created_at?: string;
+}) {
+  if (user.app_metadata?.provider !== "google") return false;
+  const createdAt = user.created_at ? Date.parse(user.created_at) : Number.NaN;
+  if (Number.isNaN(createdAt)) return false;
+  return Date.now() - createdAt < 10 * 60 * 1000; // 10 minutes
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -54,6 +64,7 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && user) {
+      const freshGoogleSignup = isFreshGoogleSignup(user);
       let existingProfile: { id?: string; handle?: string | null; onboarding_completed?: boolean } | null = null;
       const existingWithFlag = await supabase
         .from("profiles")
@@ -163,7 +174,23 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const response = NextResponse.redirect(`${origin}/auth/continue`);
+      let redirectTo = `${origin}/onboarding`;
+      if (freshGoogleSignup) {
+        redirectTo = `${origin}/onboarding`;
+      } else if (!existingWithFlag.error) {
+        const p = existingWithFlag.data;
+        if (p?.onboarding_completed && p?.handle) {
+          redirectTo = `${origin}/community/user/${p.handle}`;
+        } else {
+          redirectTo = `${origin}/onboarding`;
+        }
+      } else if (existingProfile?.handle) {
+        redirectTo = `${origin}/community/user/${existingProfile.handle}`;
+      } else {
+        redirectTo = `${origin}/onboarding`;
+      }
+
+      const response = NextResponse.redirect(redirectTo);
       pendingCookies.forEach(({ name, value, options }) => {
         response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2]);
       });

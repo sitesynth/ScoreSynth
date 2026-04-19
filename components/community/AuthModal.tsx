@@ -225,7 +225,6 @@ export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Pr
 
   return (
     <div
-      onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 100,
         background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",

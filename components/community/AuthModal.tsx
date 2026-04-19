@@ -95,6 +95,7 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [doneMessage, setDoneMessage] = useState<string>("");
 
   const supabase = createClient();
   const router = useRouter();
@@ -127,11 +128,12 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
     setLoading(true);
     setError(null);
 
+    const emailRedirectTo = `${window.location.origin}/auth/callback`;
     const { data, error: authErr } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo,
         data: {
           handle: handle.toLowerCase(),
           display_name: displayName.trim(),
@@ -143,7 +145,44 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
     if (authErr) { setError(authErr.message); setLoading(false); return; }
     if (!data.user) { setError("Something went wrong. Please try again."); setLoading(false); return; }
 
+    // If email confirmation is disabled in project settings, complete auth immediately.
+    if (data.session?.access_token && data.session?.refresh_token) {
+      await fetch("/auth/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        }),
+      });
+      setLoading(false);
+      onSuccess?.();
+      onClose();
+      router.push("/auth/continue");
+      return;
+    }
+
+    // Supabase returns empty identities for existing users; resend confirmation explicitly.
+    if ((data.user.identities ?? []).length === 0) {
+      const { error: resendErr } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo },
+      });
+
+      if (resendErr) {
+        setError("Account already exists. Sign in or reset password.");
+        setLoading(false);
+        return;
+      }
+      setDoneMessage("We resent the confirmation link. Please check your inbox and spam folder.");
+      setLoading(false);
+      setDone(true);
+      return;
+    }
+
     setLoading(false);
+    setDoneMessage("We sent a confirmation link to your email.");
     setDone(true);
   };
 
@@ -154,7 +193,24 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
 
     const { data, error: authErr } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (authErr) { setError(authErr.message); return; }
+    if (authErr) {
+      const unconfirmed = /email not confirmed/i.test(authErr.message);
+      if (unconfirmed) {
+        const { error: resendErr } = await supabase.auth.resend({
+          type: "signup",
+          email,
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        });
+        if (resendErr) {
+          setError("Email not confirmed. Check inbox/spam, then try again.");
+        } else {
+          setError("Email not confirmed. We sent a new confirmation email.");
+        }
+        return;
+      }
+      setError(authErr.message);
+      return;
+    }
 
     if (data.user) {
       if (data.session?.access_token && data.session?.refresh_token) {
@@ -255,9 +311,20 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
         {done ? (
           <>
             <p style={{ fontSize: "13px", color: "#a89690", lineHeight: 1.6 }}>
-              We sent a confirmation link to{" "}
-              <strong style={{ color: "#e8dbd8" }}>{email}</strong>.
-              <br />Click it to activate your account, then sign in.
+              {doneMessage
+                ? (
+                  <>
+                    {doneMessage}
+                    <br />
+                    Email: <strong style={{ color: "#e8dbd8" }}>{email}</strong>
+                  </>
+                ) : (
+                  <>
+                    We sent a confirmation link to{" "}
+                    <strong style={{ color: "#e8dbd8" }}>{email}</strong>.
+                    <br />Click it to activate your account, then sign in.
+                  </>
+                )}
             </p>
             <button
               onClick={() => switchMode("signin")}

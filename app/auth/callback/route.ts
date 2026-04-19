@@ -1,6 +1,19 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+function isFirstGoogleSignIn(user: {
+  app_metadata?: { provider?: string };
+  created_at?: string;
+  last_sign_in_at?: string;
+}) {
+  if (user.app_metadata?.provider !== "google") return false;
+  if (!user.created_at || !user.last_sign_in_at) return false;
+  const created = Date.parse(user.created_at);
+  const lastSignIn = Date.parse(user.last_sign_in_at);
+  if (Number.isNaN(created) || Number.isNaN(lastSignIn)) return false;
+  return Math.abs(lastSignIn - created) < 60_000;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -26,6 +39,14 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && user) {
+      if (isFirstGoogleSignIn(user)) {
+        const response = NextResponse.redirect(`${origin}/onboarding?force=1`);
+        pendingCookies.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2]);
+        });
+        return response;
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("handle")

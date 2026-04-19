@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [handle, setHandle] = useState("");
@@ -16,6 +17,7 @@ export default function OnboardingPage() {
   const [checking, setChecking] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
+  const force = searchParams.get("force") === "1";
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -24,8 +26,11 @@ export default function OnboardingPage() {
 
       // Check if already has profile
       const { data: existingProfile } = await supabase
-        .from("profiles").select("handle").eq("id", user.id).maybeSingle();
-      if (existingProfile?.handle) {
+        .from("profiles")
+        .select("id, handle, display_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (existingProfile?.handle && !force) {
         router.push(`/community/user/${existingProfile.handle}`);
         return;
       }
@@ -50,15 +55,22 @@ export default function OnboardingPage() {
       // Google / fallback — pre-fill form
       if (meta?.full_name) setDisplayName(meta.full_name);
       else if (meta?.name) setDisplayName(meta.name);
+      else if (existingProfile?.display_name) setDisplayName(existingProfile.display_name);
 
       const emailHandle = user.email?.split("@")[0]
         ?.replace(/[^a-z0-9_]/gi, "")
         ?.toLowerCase()
         ?.slice(0, 20) ?? "";
-      if (emailHandle) { setHandle(emailHandle); setPrefilled(true); }
+      if (existingProfile?.handle) {
+        setHandle(existingProfile.handle);
+        setPrefilled(true);
+      } else if (emailHandle) {
+        setHandle(emailHandle);
+        setPrefilled(true);
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [force]);
 
   const validateHandle = (val: string) => {
     if (!val) return "Handle is required.";
@@ -75,7 +87,7 @@ export default function OnboardingPage() {
     const { data } = await supabase
       .from("profiles").select("id").eq("handle", val).maybeSingle();
     setChecking(false);
-    setHandleError(data ? "This handle is already taken." : null);
+    setHandleError(data && data.id !== userId ? "This handle is already taken." : null);
   };
 
   const handleSubmit = async () => {

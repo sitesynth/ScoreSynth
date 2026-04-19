@@ -26,31 +26,19 @@ export default function AuthContinuePage() {
         return;
       }
 
-      const withFlag = await supabase
-        .from("profiles")
-        .select("handle, onboarding_completed")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!cancelled && !withFlag.error) {
-        const p = withFlag.data;
-        if (p?.onboarding_completed && p?.handle) {
-          router.replace(`/community/user/${p.handle}`);
-        } else {
-          router.replace("/onboarding");
-        }
-        return;
-      }
-
-      const fallback = await supabase
+      const metadata = (user.user_metadata ?? {}) as { onboarding_completed?: boolean };
+      const profile = await supabase
         .from("profiles")
         .select("handle")
         .eq("id", user.id)
         .maybeSingle();
 
       if (cancelled) return;
+      const handle = profile.error ? null : profile.data?.handle ?? null;
       const recent = isRecentUser((user as { created_at?: string }).created_at);
-      if (fallback.data?.handle && !recent) router.replace(`/community/user/${fallback.data.handle}`);
+      const onboardingCompleted = metadata.onboarding_completed === true
+        || (metadata.onboarding_completed !== false && !!handle && !recent);
+      if (onboardingCompleted && handle) router.replace(`/community/user/${handle}`);
       else router.replace("/onboarding");
     })();
 

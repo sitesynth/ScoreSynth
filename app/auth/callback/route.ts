@@ -32,11 +32,16 @@ async function pickUniqueHandle(
 function isFreshGoogleSignup(user: {
   app_metadata?: { provider?: string };
   created_at?: string;
+  last_sign_in_at?: string;
 }) {
   if (user.app_metadata?.provider !== "google") return false;
   const createdAt = user.created_at ? Date.parse(user.created_at) : Number.NaN;
-  if (Number.isNaN(createdAt)) return false;
-  return Date.now() - createdAt < 10 * 60 * 1000; // 10 minutes
+  const lastSignInAt = user.last_sign_in_at
+    ? Date.parse(user.last_sign_in_at)
+    : Number.NaN;
+  if (Number.isNaN(createdAt) || Number.isNaN(lastSignInAt)) return false;
+  // First OAuth login: created_at and last_sign_in_at are effectively the same event.
+  return Math.abs(lastSignInAt - createdAt) < 60 * 1000;
 }
 
 function isRecentUser(createdAt?: string) {
@@ -71,21 +76,15 @@ export async function GET(request: NextRequest) {
 
     if (!error && user) {
       const freshGoogleSignup = isFreshGoogleSignup(user);
-      let existingProfile: { id?: string; handle?: string | null; onboarding_completed?: boolean } | null = null;
-      const existingWithFlag = await supabase
+      const metadata = (user.user_metadata ?? {}) as { onboarding_completed?: boolean };
+      let existingProfile: { id?: string; handle?: string | null } | null = null;
+      const existing = await supabase
         .from("profiles")
-        .select("id, handle, onboarding_completed")
+        .select("id, handle")
         .eq("id", user.id)
         .maybeSingle();
-      if (!existingWithFlag.error) {
-        existingProfile = existingWithFlag.data ?? null;
-      } else {
-        const existingFallback = await supabase
-          .from("profiles")
-          .select("id, handle")
-          .eq("id", user.id)
-          .maybeSingle();
-        existingProfile = existingFallback.data ?? null;
+      if (!existing.error) {
+        existingProfile = existing.data ?? null;
       }
 
       const findByHandle = async (handle: string) => {
@@ -120,18 +119,8 @@ export async function GET(request: NextRequest) {
           display_name: displayName,
           bio: "",
           avatar_url: avatarUrl,
-          onboarding_completed: false,
         };
-        let createResult = await supabase.from("profiles").upsert(payload);
-        if (createResult.error && /onboarding_completed/i.test(createResult.error.message)) {
-          createResult = await supabase.from("profiles").upsert({
-            id: user.id,
-            handle,
-            display_name: displayName,
-            bio: "",
-            avatar_url: avatarUrl,
-          });
-        }
+        const createResult = await supabase.from("profiles").upsert(payload);
         if (createResult.error) writeError = createResult.error.message;
       } else if (!existingProfile.handle) {
         // Existing row without handle: repair minimally, keep onboarding state untouched.
@@ -159,18 +148,8 @@ export async function GET(request: NextRequest) {
               display_name: displayName,
               bio: "",
               avatar_url: avatarUrl,
-              onboarding_completed: false,
             };
-            const adminUpsert = await admin.from("profiles").upsert(adminPayload);
-            if (adminUpsert.error && /onboarding_completed/i.test(adminUpsert.error.message)) {
-              await admin.from("profiles").upsert({
-                id: user.id,
-                handle,
-                display_name: displayName,
-                bio: "",
-                avatar_url: avatarUrl,
-              });
-            }
+            await admin.from("profiles").upsert(adminPayload);
           } else if (!existingProfile.handle) {
             await admin
               .from("profiles")
@@ -180,17 +159,21 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      if (freshGoogleSignup && metadata.onboarding_completed !== false) {
+        await supabase.auth.updateUser({
+          data: {
+            ...user.user_metadata,
+            onboarding_completed: false,
+          },
+        });
+      }
+
       let redirectTo = `${origin}/onboarding`;
       if (freshGoogleSignup) {
         redirectTo = `${origin}/onboarding`;
-      } else if (!existingWithFlag.error) {
-        const p = existingWithFlag.data;
-        if (p?.onboarding_completed && p?.handle) {
-          redirectTo = `${origin}/community/user/${p.handle}`;
-        } else {
-          redirectTo = `${origin}/onboarding`;
-        }
-      } else if (existingProfile?.handle && !isRecentUser((user as { created_at?: string }).created_at)) {
+      } else if (metadata.onboarding_completed === true && existingProfile?.handle) {
+        redirectTo = `${origin}/community/user/${existingProfile.handle}`;
+      } else if (metadata.onboarding_completed !== false && existingProfile?.handle && !isRecentUser((user as { created_at?: string }).created_at)) {
         redirectTo = `${origin}/community/user/${existingProfile.handle}`;
       } else {
         redirectTo = `${origin}/onboarding`;

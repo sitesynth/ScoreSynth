@@ -445,28 +445,6 @@ export default function Navbar() {
               ) : (
                 <>
                   <button
-                    onClick={() => { setAuthMode("signin"); setShowAuth(true); }}
-                    style={{
-                      fontSize: "13px", fontWeight: 500,
-                      padding: "8px 16px", borderRadius: "8px",
-                      background: "transparent", color: "#e8dbd8",
-                      border: "1px solid rgba(255,255,255,0.24)", cursor: "pointer",
-                      transition: "background-color 0.15s, border-color 0.15s, color 0.15s",
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)";
-                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.42)";
-                      e.currentTarget.style.color = "#fff";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.24)";
-                      e.currentTarget.style.color = "#e8dbd8";
-                    }}
-                  >
-                    Sign in
-                  </button>
-                  <button
                     onClick={() => { setAuthMode("signup"); setShowAuth(true); }}
                     style={{
                       fontSize: "13px", fontWeight: 500,

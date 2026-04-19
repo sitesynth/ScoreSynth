@@ -135,6 +135,7 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
         data: {
           handle: handle.toLowerCase(),
           display_name: displayName.trim(),
+          onboarding_completed: false,
         },
       },
     });

@@ -49,30 +49,24 @@ export async function middleware(request: NextRequest) {
 
   if (!user) return supabaseResponse;
 
+  const metadata = (user.user_metadata ?? {}) as { onboarding_completed?: boolean };
   let handle: string | null = null;
-  let onboardingCompleted = false;
+  let onboardingCompleted = metadata.onboarding_completed === true;
 
-  // Prefer explicit onboarding flag; tolerate old schema during rollout.
-  const profileWithFlag = await supabase
+  const profile = await supabase
     .from("profiles")
-    .select("handle, onboarding_completed")
+    .select("handle")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profileWithFlag.error) {
-    handle = profileWithFlag.data?.handle ?? null;
-    onboardingCompleted = profileWithFlag.data?.onboarding_completed === true;
+  if (!profile.error) {
+    handle = profile.data?.handle ?? null;
+    // Legacy fallback for users without metadata flag.
+    if (metadata.onboarding_completed !== true && metadata.onboarding_completed !== false) {
+      onboardingCompleted = !!handle && !isRecentUser((user as { created_at?: string }).created_at);
+    }
   } else {
-    const profileFallback = await supabase
-      .from("profiles")
-      .select("handle")
-      .eq("id", user.id)
-      .maybeSingle();
-    handle = profileFallback.data?.handle ?? null;
-    // Legacy schema fallback (no onboarding_completed column):
-    // new users must still pass onboarding even if auto-generated handle exists.
-    const recent = isRecentUser((user as { created_at?: string }).created_at);
-    onboardingCompleted = !!handle && !recent;
+    onboardingCompleted = metadata.onboarding_completed === true;
   }
 
   const isOnboarding = pathname.startsWith("/onboarding");

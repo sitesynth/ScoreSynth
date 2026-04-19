@@ -21,14 +21,15 @@ export default function OnboardingPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push("/"); return; }
       setUserId(user.id);
+      const metadata = (user.user_metadata ?? {}) as { onboarding_completed?: boolean };
 
       // Check if already has profile
       const { data: existingProfile } = await supabase
         .from("profiles")
-        .select("id, handle, display_name, onboarding_completed")
+        .select("id, handle, display_name")
         .eq("id", user.id)
         .maybeSingle();
-      if (existingProfile?.onboarding_completed && existingProfile?.handle) {
+      if (metadata.onboarding_completed === true && existingProfile?.handle) {
         router.push(`/community/user/${existingProfile.handle}`);
         return;
       }
@@ -91,24 +92,17 @@ export default function OnboardingPage() {
       display_name: displayName.trim() || handle,
       bio: "",
       avatar_url: avatarUrl,
-      onboarding_completed: true,
     };
-    let { error } = await supabase.from("profiles").upsert(payload);
-    if (error && /onboarding_completed/i.test(error.message)) {
-      // Backward compatibility while production schema catches up.
-      const fallback = {
-        id: userId,
-        handle: handle.toLowerCase(),
-        display_name: displayName.trim() || handle,
-        bio: "",
-        avatar_url: avatarUrl,
-      };
-      const retry = await supabase.from("profiles").upsert(fallback);
-      error = retry.error;
-    }
+    const { error } = await supabase.from("profiles").upsert(payload);
 
     setSaving(false);
     if (error) { setHandleError(error.message); return; }
+    await supabase.auth.updateUser({
+      data: {
+        ...(currentUser?.user_metadata ?? {}),
+        onboarding_completed: true,
+      },
+    });
     router.push("/");
   };
 

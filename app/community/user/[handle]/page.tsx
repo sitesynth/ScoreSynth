@@ -441,9 +441,13 @@ export default function PublicUserProfilePage() {
   // Follow state
   useEffect(() => {
     if (!currentUser || !profileUser) return;
+    if (currentUser.id === profileUser.id) {
+      setIsFollowing(false);
+      return;
+    }
     const supabase = createClient();
     supabase.from("follows").select("follower_id")
-      .eq("follower_id", currentUser.id).eq("followee_id", profileUser.id).single()
+      .eq("follower_id", currentUser.id).eq("followee_id", profileUser.id).maybeSingle()
       .then(({ data }) => setIsFollowing(!!data));
   }, [currentUser, profileUser]);
 

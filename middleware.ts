@@ -6,6 +6,12 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const isConfigured =
   supabaseUrl.startsWith("http://") || supabaseUrl.startsWith("https://");
 
+function isRecentUser(createdAt?: string) {
+  const ts = createdAt ? Date.parse(createdAt) : Number.NaN;
+  if (Number.isNaN(ts)) return false;
+  return Date.now() - ts < 24 * 60 * 60 * 1000; // 24h
+}
+
 export async function middleware(request: NextRequest) {
   // Skip if Supabase is not yet configured
   if (!isConfigured) return NextResponse.next({ request });
@@ -63,7 +69,10 @@ export async function middleware(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
     handle = profileFallback.data?.handle ?? null;
-    onboardingCompleted = !!handle;
+    // Legacy schema fallback (no onboarding_completed column):
+    // new users must still pass onboarding even if auto-generated handle exists.
+    const recent = isRecentUser((user as { created_at?: string }).created_at);
+    onboardingCompleted = !!handle && !recent;
   }
 
   const isOnboarding = pathname.startsWith("/onboarding");

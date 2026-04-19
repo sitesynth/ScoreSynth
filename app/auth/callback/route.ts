@@ -39,6 +39,12 @@ function isFreshGoogleSignup(user: {
   return Date.now() - createdAt < 10 * 60 * 1000; // 10 minutes
 }
 
+function isRecentUser(createdAt?: string) {
+  const ts = createdAt ? Date.parse(createdAt) : Number.NaN;
+  if (Number.isNaN(ts)) return false;
+  return Date.now() - ts < 24 * 60 * 60 * 1000; // 24h
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -184,7 +190,7 @@ export async function GET(request: NextRequest) {
         } else {
           redirectTo = `${origin}/onboarding`;
         }
-      } else if (existingProfile?.handle) {
+      } else if (existingProfile?.handle && !isRecentUser((user as { created_at?: string }).created_at)) {
         redirectTo = `${origin}/community/user/${existingProfile.handle}`;
       } else {
         redirectTo = `${origin}/onboarding`;

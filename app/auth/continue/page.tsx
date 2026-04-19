@@ -4,6 +4,12 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+function isRecentUser(createdAt?: string) {
+  const ts = createdAt ? Date.parse(createdAt) : Number.NaN;
+  if (Number.isNaN(ts)) return false;
+  return Date.now() - ts < 24 * 60 * 60 * 1000; // 24h
+}
+
 export default function AuthContinuePage() {
   const router = useRouter();
 
@@ -43,7 +49,8 @@ export default function AuthContinuePage() {
         .maybeSingle();
 
       if (cancelled) return;
-      if (fallback.data?.handle) router.replace(`/community/user/${fallback.data.handle}`);
+      const recent = isRecentUser((user as { created_at?: string }).created_at);
+      if (fallback.data?.handle && !recent) router.replace(`/community/user/${fallback.data.handle}`);
       else router.replace("/onboarding");
     })();
 

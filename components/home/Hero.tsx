@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import AuthModal from "@/components/community/AuthModal";
 
 export default function Hero() {
   const [email, setEmail] = useState("");
+  const [showAuth, setShowAuth] = useState(false);
 
   const handleGoogle = async () => {
     const supabase = createClient();
@@ -83,6 +85,7 @@ export default function Hero() {
 
             {/* CTA */}
             <button
+              onClick={() => setShowAuth(true)}
               style={{
                 width: "100%", padding: "12px 16px", borderRadius: "10px",
                 background: "#fff", color: "#211817",
@@ -113,6 +116,15 @@ export default function Hero() {
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         </div>
+
+        {showAuth && (
+          <AuthModal
+            intent="download"
+            initialMode="signup"
+            onClose={() => setShowAuth(false)}
+            onSuccess={() => setShowAuth(false)}
+          />
+        )}
       </div>
     </section>
   );

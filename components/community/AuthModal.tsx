@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 type Props = {
   intent: "download" | "purchase" | "comment" | "follow" | "upload";
   scoreTitle?: string;
+  initialMode?: "signin" | "signup";
   onClose: () => void;
   onSuccess?: () => void;
 };
@@ -80,8 +81,8 @@ function EyeIcon({ open }: { open: boolean }) {
   );
 }
 
-export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Props) {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+export default function AuthModal({ intent, scoreTitle, initialMode = "signin", onClose, onSuccess }: Props) {
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -249,6 +250,12 @@ export default function AuthModal({ intent, scoreTitle, onClose, onSuccess }: Pr
           </h2>
           <button onClick={onClose} style={{ color: "#6b5452", fontSize: "20px", lineHeight: 1, padding: "4px", cursor: "pointer", background: "none", border: "none" }}>×</button>
         </div>
+
+        {!done && mode === "signin" && scoreTitle && (
+          <p style={{ fontSize: "13px", color: "#a89690", marginTop: "-2px", marginBottom: "2px" }}>
+            Continue to access <span style={{ color: "#e8dbd8", fontStyle: "italic" }}>{scoreTitle}</span>.
+          </p>
+        )}
 
         {/* Email confirmed screen */}
         {done ? (

@@ -968,8 +968,8 @@ export default function PublicUserProfilePage() {
                   <div style={{ display: "flex", gap: "4px", marginBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                     {([
                       { key: "resources", label: "Resources", count: userScores.length },
-                      { key: "saved", label: "Saved", count: savedScores.length },
-                    ] as const).map(tab => (
+                      ...(isOwner ? [{ key: "saved", label: "Saved", count: savedScores.length }] : []),
+                    ] as { key: "resources" | "saved"; label: string; count: number }[]).map(tab => (
                       <button key={tab.key} onClick={() => { setActiveTab(tab.key); setActiveCollection(null); }}
                         style={{
                           padding: "8px 16px", fontSize: "13px", fontWeight: 500,

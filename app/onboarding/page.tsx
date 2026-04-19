@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [handle, setHandle] = useState("");
@@ -17,9 +16,10 @@ export default function OnboardingPage() {
   const [checking, setChecking] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
-  const force = searchParams.get("force") === "1";
 
   useEffect(() => {
+    const force = new URLSearchParams(window.location.search).get("force") === "1";
+
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push("/"); return; }
       setUserId(user.id);
@@ -70,7 +70,7 @@ export default function OnboardingPage() {
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [force]);
+  }, []);
 
   const validateHandle = (val: string) => {
     if (!val) return "Handle is required.";

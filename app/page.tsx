@@ -6,9 +6,11 @@ import HowItWorks from "@/components/home/HowItWorks";
 import Pricing from "@/components/home/Pricing";
 import APISection from "@/components/home/APISection";
 import FAQ from "@/components/home/FAQ";
+import HomeSessionRedirect from "@/components/auth/HomeSessionRedirect";
 export default function HomePage() {
   return (
     <>
+      <HomeSessionRedirect />
       <Navbar />
       <main>
         <Hero />

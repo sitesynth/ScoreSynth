@@ -7,24 +7,21 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createServerSupabaseClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("handle")
-          .eq("id", user.id)
-          .maybeSingle();
+    if (!error && user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("handle")
+        .eq("id", user.id)
+        .maybeSingle();
 
-        if (profile?.handle) {
-          return NextResponse.redirect(`${origin}/community/user/${profile.handle}`);
-        }
-
-        // No profile yet — send to onboarding to choose handle & display name.
-        return NextResponse.redirect(`${origin}/onboarding`);
+      if (profile?.handle) {
+        return NextResponse.redirect(`${origin}/community/user/${profile.handle}`);
       }
+
+      // No profile yet — send to onboarding to choose handle & display name.
+      return NextResponse.redirect(`${origin}/onboarding`);
     }
   }
 

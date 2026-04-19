@@ -74,7 +74,7 @@ export default function AccountSettingsModal({ onClose }: { onClose: () => void 
       // Sign out client-side and redirect
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.push("/");
+      window.location.assign("/");
     } catch {
       setDeleteMsg({ ok: false, text: "Something went wrong. Please try again." });
       setDeleteLoading(false);

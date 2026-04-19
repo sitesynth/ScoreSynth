@@ -432,7 +432,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 onClick={async () => {
                   const supabase = createClient();
                   await supabase.auth.signOut();
-                  router.push("/");
+                  window.location.assign("/");
                 }}
                 style={{ display: "flex", alignItems: "center", gap: "9px", padding: "8px 10px", borderRadius: "7px", background: "none", border: "none", cursor: "pointer", color: "#a89690", fontSize: "13px", width: "100%", textAlign: "left", transition: "background 0.13s, color 0.13s" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(192,57,43,0.12)"; e.currentTarget.style.color = "#e87060"; }}

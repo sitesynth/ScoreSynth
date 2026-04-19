@@ -59,6 +59,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
   const [priceDisplay, setPriceDisplay] = useState(score.price_display ?? "");
   const [coverFile,   setCoverFile]   = useState<File | null>(null);
   const [pdfFile,     setPdfFile]     = useState<File | null>(null);
+  const [audioFile,   setAudioFile]   = useState<File | null>(null);
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState<string | null>(null);
 
@@ -98,6 +99,14 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       }
     }
 
+    // Upload audio recording if provided
+    let audioUrl = score.midi_url ?? null;
+    if (audioFile) {
+      const ap = `${user.id}/audio/${Date.now()}-${audioFile.name}`;
+      const { error: audioErr } = await supabase.storage.from("score-files").upload(ap, audioFile);
+      if (!audioErr) audioUrl = ap;
+    }
+
     const updates = {
       title:         title.trim(),
       composer:      composer.trim(),
@@ -110,6 +119,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       price_display: tag === "premium" && priceDisplay ? priceDisplay.trim() : null,
       cover_url:     coverUrl,
       pdf_url:       pdfUrl,
+      midi_url:      audioUrl,
       updated_at:    new Date().toISOString(),
     };
 
@@ -300,6 +310,51 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
               >×</button>
             )}
           </label>
+        </div>
+
+        {/* Audio Recording */}
+        <div>
+          <label style={{ fontSize: "12px", color: "#6b5452", marginBottom: "6px", display: "block" }}>
+            Audio Recording {score.midi_url ? "(replace)" : "(optional)"}
+          </label>
+          {score.midi_url && !audioFile && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              padding: "8px 12px", borderRadius: "8px", marginBottom: "8px",
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)",
+              fontSize: "12px", color: "#8a7270",
+            }}>
+              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+              </svg>
+              Current recording attached
+            </div>
+          )}
+          <label style={{
+            display: "flex", alignItems: "center", gap: "10px",
+            padding: "10px 14px", borderRadius: "8px", cursor: "pointer",
+            background: "#1e1513",
+            border: audioFile ? "1px solid rgba(200,169,126,0.4)" : "1px dashed rgba(255,255,255,0.15)",
+            fontSize: "13px", color: audioFile ? "#c8a97e" : "#6b5452",
+          }}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+            </svg>
+            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {audioFile ? audioFile.name : "Choose audio file…"}
+            </span>
+            <input type="file" accept="audio/*" style={{ display: "none" }} onChange={e => setAudioFile(e.target.files?.[0] ?? null)} />
+            {audioFile && (
+              <button
+                type="button"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setAudioFile(null); }}
+                style={{ background: "none", border: "none", color: "#6b5452", cursor: "pointer", padding: "0", fontSize: "16px", lineHeight: 1 }}
+              >×</button>
+            )}
+          </label>
+          {audioFile && (
+            <audio controls src={URL.createObjectURL(audioFile)} style={{ width: "100%", marginTop: "8px", height: "36px" }} />
+          )}
         </div>
 
         {error && <p style={{ fontSize: "12px", color: "#c0392b" }}>{error}</p>}

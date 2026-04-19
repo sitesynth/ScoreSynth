@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,6 +11,118 @@ import SaveButton from "@/components/community/SaveButton";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 import type { Score, Comment } from "@/lib/supabase/types";
+
+// ─── Audio Player ─────────────────────────────────────────────────────────────
+function AudioPlayer({ src, title }: { src: string; title: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  const fmt = (s: number) => {
+    if (!isFinite(s)) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  const toggle = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) { a.pause(); setPlaying(false); }
+    else { a.play().then(() => setPlaying(true)).catch(() => {}); }
+  };
+
+  const seek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const a = audioRef.current;
+    if (!a || !barRef.current) return;
+    const rect = barRef.current.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    a.currentTime = ratio * a.duration;
+    setProgress(ratio * 100);
+  };
+
+  return (
+    <div style={{
+      borderRadius: "14px", overflow: "hidden",
+      background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)",
+      marginBottom: "24px", padding: "16px 18px",
+      display: "flex", flexDirection: "column", gap: "10px",
+    }}>
+      <p style={{ fontSize: "11px", color: "#6b5452", letterSpacing: "0.08em", textTransform: "uppercase", margin: 0 }}>
+        Audio Recording
+      </p>
+      <audio
+        ref={audioRef}
+        src={src}
+        onTimeUpdate={e => {
+          const a = e.currentTarget;
+          setCurrent(a.currentTime);
+          if (!dragging) setProgress((a.currentTime / a.duration) * 100 || 0);
+        }}
+        onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
+        onEnded={() => { setPlaying(false); setProgress(0); setCurrent(0); if(audioRef.current) audioRef.current.currentTime = 0; }}
+      />
+
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {/* Play/Pause */}
+        <button
+          onClick={toggle}
+          style={{
+            width: "40px", height: "40px", borderRadius: "50%", flexShrink: 0,
+            background: "#c0392b", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = "#a93226")}
+          onMouseLeave={e => (e.currentTarget.style.background = "#c0392b")}
+        >
+          {playing ? (
+            <svg width="14" height="14" fill="#fff" viewBox="0 0 24 24">
+              <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+            </svg>
+          ) : (
+            <svg width="14" height="14" fill="#fff" viewBox="0 0 24 24">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          )}
+        </button>
+
+        {/* Title + progress */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: "12px", color: "#e8dbd8", margin: "0 0 7px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {title}
+          </p>
+          {/* Progress bar */}
+          <div
+            ref={barRef}
+            onClick={seek}
+            onMouseDown={() => setDragging(true)}
+            onMouseUp={() => setDragging(false)}
+            style={{
+              height: "4px", borderRadius: "2px", background: "rgba(255,255,255,0.1)",
+              cursor: "pointer", position: "relative",
+            }}
+          >
+            <div style={{
+              position: "absolute", left: 0, top: 0, height: "100%",
+              width: `${progress}%`, borderRadius: "2px",
+              background: "#c0392b", transition: dragging ? "none" : "width 0.1s linear",
+            }} />
+          </div>
+        </div>
+
+        {/* Time */}
+        <span style={{ fontSize: "11px", color: "#6b5452", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+          {fmt(current)} / {fmt(duration)}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function ScoreDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +142,7 @@ export default function ScoreDetailPage() {
   const [authIntent, setAuthIntent] = useState<"download" | "purchase">("download");
   const [loadingScore, setLoadingScore] = useState(true);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -52,6 +165,13 @@ export default function ScoreDetailPage() {
             .from("score-files")
             .createSignedUrl(scoreData.pdf_url, 3600);
           if (signedData?.signedUrl) setPdfPreviewUrl(signedData.signedUrl);
+        }
+        // Audio recording signed URL
+        if (scoreData.midi_url) {
+          const { data: audioData } = await supabase.storage
+            .from("score-files")
+            .createSignedUrl(scoreData.midi_url, 3600);
+          if (audioData?.signedUrl) setAudioUrl(audioData.signedUrl);
         }
       }
       setLoadingScore(false);
@@ -352,6 +472,13 @@ export default function ScoreDetailPage() {
                 </div>
               ))}
             </div>
+
+            {/* Audio player in sidebar */}
+            {audioUrl && (
+              <div style={{ marginBottom: "16px" }}>
+                <AudioPlayer src={audioUrl} title={score.title} />
+              </div>
+            )}
 
             {/* Actions */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>

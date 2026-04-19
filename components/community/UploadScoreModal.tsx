@@ -55,6 +55,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
   const [pages, setPages] = useState(1);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
 
   // Instrument parts
   const [parts, setParts] = useState<Part[]>([]);
@@ -86,6 +87,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
       pages !== 1 ||
       pdfFile ||
       coverFile ||
+      audioFile ||
       hasPartData,
     );
   }, [
@@ -101,6 +103,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
     pages,
     pdfFile,
     coverFile,
+    audioFile,
     parts,
   ]);
 
@@ -170,6 +173,14 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
       }
     }
 
+    // Upload audio recording
+    let audioPath: string | null = null;
+    if (audioFile) {
+      const ap = `${user.id}/audio/${Date.now()}-${audioFile.name}`;
+      const { error: audioErr } = await supabase.storage.from("score-files").upload(ap, audioFile);
+      if (!audioErr) audioPath = ap;
+    }
+
     // Upload instrument parts
     const uploadedParts: { name: string; pdf_url: string }[] = [];
     for (const part of parts) {
@@ -192,6 +203,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
       pages,
       pdf_url: pdfPath,
       cover_url: coverUrl,
+      midi_url: audioPath,
       author_id: user.id,
       parts: uploadedParts,
       resource_collection_id: selectedCollectionId,
@@ -323,6 +335,43 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
               {pdfFile ? pdfFile.name : "Choose PDF…"}
               <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => setPdfFile(e.target.files?.[0] ?? null)} />
             </label>
+          </div>
+
+          {/* ── Audio Recording ── */}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "14px" }}>
+            <p style={{ fontSize: "13px", fontWeight: 600, color: "#e8dbd8", margin: "0 0 4px" }}>Audio Recording</p>
+            <p style={{ fontSize: "11px", color: "#6b5452", margin: "0 0 10px", lineHeight: 1.5 }}>
+              Attach an MP3 or WAV recording so listeners can hear the piece.
+            </p>
+            <label style={{
+              display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px",
+              borderRadius: "8px", cursor: "pointer", background: "#1e1513",
+              border: `1px dashed ${audioFile ? "rgba(200,169,126,0.45)" : "rgba(255,255,255,0.15)"}`,
+              fontSize: "13px", color: audioFile ? "#c8a97e" : "#6b5452",
+            }}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="10 8 16 12 10 16 10 8"/>
+              </svg>
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {audioFile ? audioFile.name : "Choose audio file…"}
+              </span>
+              {audioFile && (
+                <button
+                  type="button"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setAudioFile(null); }}
+                  style={{ background: "none", border: "none", color: "#6b5452", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: 0, flexShrink: 0 }}
+                >×</button>
+              )}
+              <input type="file" accept="audio/*" style={{ display: "none" }} onChange={e => setAudioFile(e.target.files?.[0] ?? null)} />
+            </label>
+            {audioFile && (
+              <audio
+                controls
+                src={URL.createObjectURL(audioFile)}
+                style={{ width: "100%", marginTop: "8px", height: "36px" }}
+              />
+            )}
           </div>
 
           {/* ── Collection ── */}

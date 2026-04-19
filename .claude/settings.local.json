@@ -13,7 +13,14 @@
       "Bash(Start-Sleep -Seconds 2)",
       "Bash(npm run:*)",
       "Bash(Start-Sleep -Seconds 8)",
-      "Bash(Get-Content \"C:\\\\Users\\\\mayya\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-mayya-Desktop-SITES-ScoreSynth\\\\a3ef2790-9ea2-4f78-900d-1d272409ce2f\\\\tasks\\\\bbarieqwv.output\" -Tail 20)"
+      "Bash(Get-Content \"C:\\\\Users\\\\mayya\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-mayya-Desktop-SITES-ScoreSynth\\\\a3ef2790-9ea2-4f78-900d-1d272409ce2f\\\\tasks\\\\bbarieqwv.output\" -Tail 20)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const d=require\\('/dev/stdin'\\); console.log\\(Object.keys\\({...d.dependencies,...d.devDependencies}\\).filter\\(k=>k.includes\\('email'\\)||k.includes\\('mail'\\)||k.includes\\('resend'\\)||k.includes\\('smtp'\\)\\)\\)\")",
+      "Bash(node -e \"const p=require\\('C:/Users/mayya/Desktop/SITES/ScoreSynth/package.json'\\); const deps={...p.dependencies,...p.devDependencies}; console.log\\(Object.keys\\(deps\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(npm uninstall *)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)"
     ]
   }
 }

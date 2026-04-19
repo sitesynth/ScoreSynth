@@ -37,21 +37,6 @@ export default function OnboardingPage() {
 
       const meta = user.user_metadata;
 
-      // If signup metadata has handle — auto-create profile, no form needed
-      if (meta?.handle) {
-        const { error } = await supabase.from("profiles").upsert({
-          id: user.id,
-          handle: meta.handle,
-          display_name: meta.display_name || meta.handle,
-          bio: "",
-          avatar_url: meta.avatar_url || meta.picture || null,
-        });
-        if (!error) {
-          router.push(`/community/user/${meta.handle}`);
-          return;
-        }
-      }
-
       // Google / fallback — pre-fill form
       if (meta?.full_name) setDisplayName(meta.full_name);
       else if (meta?.name) setDisplayName(meta.name);
@@ -133,7 +118,7 @@ export default function OnboardingPage() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: "center" }}>
-          <Image src="/logo.svg" alt="ScoreSynth" width={40} height={40} style={{ margin: "0 auto 16px" }} />
+          <Image src="/logo-scoresynth.svg" alt="ScoreSynth" width={40} height={40} style={{ margin: "0 auto 16px" }} />
           <h1 style={{
             fontFamily: "Georgia, serif",
             fontSize: "28px",

@@ -1,26 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import AuthModal from "@/components/community/AuthModal";
-import { useAuth } from "@/lib/supabase/useAuth";
 
 export default function Hero() {
   const [email, setEmail] = useState("");
   const [showAuth, setShowAuth] = useState(false);
-  const router = useRouter();
-  const { user, handle, loading } = useAuth();
-
-  useEffect(() => {
-    if (loading || !user) return;
-    if (handle) {
-      router.replace(`/community/user/${handle}`);
-      return;
-    }
-    router.replace("/onboarding?force=1");
-  }, [loading, user?.id, handle, router]);
 
   const handleGoogle = async () => {
     const supabase = createClient();

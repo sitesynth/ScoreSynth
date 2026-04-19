@@ -156,6 +156,16 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
     if (authErr) { setError(authErr.message); return; }
 
     if (data.user) {
+      if (data.session?.access_token && data.session?.refresh_token) {
+        await fetch("/auth/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          }),
+        });
+      }
       onSuccess?.();
       onClose();
       router.push("/");

@@ -118,7 +118,7 @@ export default function OnboardingPage() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: "center" }}>
-          <Image src="/logo-scoresynth.svg" alt="ScoreSynth" width={40} height={40} style={{ margin: "0 auto 16px" }} />
+          <Image src="/logos/logo-scoresynth.svg" alt="ScoreSynth" width={180} height={40} style={{ margin: "0 auto 16px" }} />
           <h1 style={{
             fontFamily: "Georgia, serif",
             fontSize: "28px",

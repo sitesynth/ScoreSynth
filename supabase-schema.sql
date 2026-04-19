@@ -26,11 +26,28 @@ create table public.profiles (
 -- Auto-create profile row when a new user registers
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  base_handle text;
+  final_handle text;
+  suffix_len int := 6;
 begin
+  base_handle := lower(regexp_replace(split_part(new.email, '@', 1), '[^a-z0-9]', '_', 'g'));
+  if base_handle is null or length(base_handle) < 3 then
+    base_handle := 'user';
+  end if;
+  base_handle := left(base_handle, 24);
+  final_handle := base_handle;
+
+  -- Avoid unique collisions when different emails normalize to same handle.
+  while exists (select 1 from public.profiles p where p.handle = final_handle) loop
+    final_handle := left(base_handle, 30 - (suffix_len + 1)) || '_' || left(replace(new.id::text, '-', ''), suffix_len);
+    suffix_len := least(suffix_len + 1, 10);
+  end loop;
+
   insert into public.profiles (id, handle, display_name)
   values (
     new.id,
-    lower(regexp_replace(split_part(new.email, '@', 1), '[^a-z0-9]', '_', 'g')),
+    final_handle,
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1))
   );
   return new;
@@ -152,6 +169,9 @@ alter table public.follows  enable row level security;
 -- ── PROFILES ──
 create policy "profiles_select_public" on public.profiles
   for select using (true);
+
+create policy "profiles_insert_own" on public.profiles
+  for insert with check (auth.uid() = id);
 
 create policy "profiles_update_own" on public.profiles
   for update using (auth.uid() = id);

@@ -245,7 +245,7 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
     setLoading(true);
     setError(null);
     const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}/auth/confirm?next=/auth/reset-password`,
     });
     setLoading(false);
     if (resetErr) {

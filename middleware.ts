@@ -72,10 +72,12 @@ export async function middleware(request: NextRequest) {
   const isOnboarding = pathname.startsWith("/onboarding");
   const isCallback = pathname.startsWith("/auth/callback");
   const isAuthContinue = pathname.startsWith("/auth/continue");
+  const isAuthConfirm = pathname.startsWith("/auth/confirm");
+  const isAuthReset = pathname.startsWith("/auth/reset-password");
   const isApi = pathname.startsWith("/api/");
   const isHome = pathname === "/";
 
-  if (!onboardingCompleted && !isOnboarding && !isCallback && !isAuthContinue && !isApi) {
+  if (!onboardingCompleted && !isOnboarding && !isCallback && !isAuthContinue && !isAuthConfirm && !isAuthReset && !isApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/onboarding";
     url.search = "";

@@ -1,13 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AuthModal from "@/components/community/AuthModal";
 
 export default function Hero() {
   const [email, setEmail] = useState("");
   const [showAuth, setShowAuth] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+
+    // Fast client-side fallback when server-side redirect misses session cookies.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!cancelled && session?.user) {
+        router.replace("/onboarding?force=1");
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!cancelled && session?.user) {
+        router.replace("/onboarding?force=1");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   const handleGoogle = async () => {
     const supabase = createClient();

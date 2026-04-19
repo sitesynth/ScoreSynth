@@ -9,6 +9,9 @@ import APISection from "@/components/home/APISection";
 import FAQ from "@/components/home/FAQ";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function HomePage() {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();

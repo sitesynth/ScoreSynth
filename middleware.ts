@@ -9,6 +9,14 @@ const isConfigured =
 export async function middleware(request: NextRequest) {
   // Skip if Supabase is not yet configured
   if (!isConfigured) return NextResponse.next({ request });
+  const host = request.headers.get("host") ?? "";
+  const isProdApex = host === "scoresynth.com";
+  if (isProdApex) {
+    const url = request.nextUrl.clone();
+    url.host = "www.scoresynth.com";
+    url.protocol = "https:";
+    return NextResponse.redirect(url, 308);
+  }
   const { pathname } = request.nextUrl;
 
   let supabaseResponse = NextResponse.next({ request });

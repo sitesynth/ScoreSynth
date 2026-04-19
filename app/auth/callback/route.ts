@@ -54,6 +54,23 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error && user) {
+      let existingProfile: { id?: string; handle?: string | null; onboarding_completed?: boolean } | null = null;
+      const existingWithFlag = await supabase
+        .from("profiles")
+        .select("id, handle, onboarding_completed")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!existingWithFlag.error) {
+        existingProfile = existingWithFlag.data ?? null;
+      } else {
+        const existingFallback = await supabase
+          .from("profiles")
+          .select("id, handle")
+          .eq("id", user.id)
+          .maybeSingle();
+        existingProfile = existingFallback.data ?? null;
+      }
+
       const findByHandle = async (handle: string) => {
         const { data } = await supabase
           .from("profiles")
@@ -76,28 +93,40 @@ export async function GET(request: NextRequest) {
         || (user.user_metadata?.picture as string | undefined)
         || null;
 
-      const payload = {
-        id: user.id,
-        handle,
-        display_name: displayName,
-        bio: "",
-        avatar_url: avatarUrl,
-        onboarding_completed: false,
-      };
+      let writeError: string | null = null;
 
-      let upsertResult = await supabase.from("profiles").upsert(payload);
-      if (upsertResult.error && /onboarding_completed/i.test(upsertResult.error.message)) {
-        upsertResult = await supabase.from("profiles").upsert({
+      if (!existingProfile) {
+        // First-time user: ensure a profile row exists.
+        const payload = {
           id: user.id,
           handle,
           display_name: displayName,
           bio: "",
           avatar_url: avatarUrl,
-        });
+          onboarding_completed: false,
+        };
+        let createResult = await supabase.from("profiles").upsert(payload);
+        if (createResult.error && /onboarding_completed/i.test(createResult.error.message)) {
+          createResult = await supabase.from("profiles").upsert({
+            id: user.id,
+            handle,
+            display_name: displayName,
+            bio: "",
+            avatar_url: avatarUrl,
+          });
+        }
+        if (createResult.error) writeError = createResult.error.message;
+      } else if (!existingProfile.handle) {
+        // Existing row without handle: repair minimally, keep onboarding state untouched.
+        const repairResult = await supabase
+          .from("profiles")
+          .update({ handle, display_name: displayName, avatar_url: avatarUrl })
+          .eq("id", user.id);
+        if (repairResult.error) writeError = repairResult.error.message;
       }
 
       // If policies or trigger are misconfigured, use service role as hard fallback.
-      if (upsertResult.error) {
+      if (writeError) {
         const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (serviceKey) {
           const admin = createAdminClient(
@@ -105,28 +134,58 @@ export async function GET(request: NextRequest) {
             serviceKey,
             { auth: { autoRefreshToken: false, persistSession: false } }
           );
-          const adminPayload = {
-            id: user.id,
-            handle,
-            display_name: displayName,
-            bio: "",
-            avatar_url: avatarUrl,
-            onboarding_completed: false,
-          };
-          const adminUpsert = await admin.from("profiles").upsert(adminPayload);
-          if (adminUpsert.error && /onboarding_completed/i.test(adminUpsert.error.message)) {
-            await admin.from("profiles").upsert({
+
+          if (!existingProfile) {
+            const adminPayload = {
               id: user.id,
               handle,
               display_name: displayName,
               bio: "",
               avatar_url: avatarUrl,
-            });
+              onboarding_completed: false,
+            };
+            const adminUpsert = await admin.from("profiles").upsert(adminPayload);
+            if (adminUpsert.error && /onboarding_completed/i.test(adminUpsert.error.message)) {
+              await admin.from("profiles").upsert({
+                id: user.id,
+                handle,
+                display_name: displayName,
+                bio: "",
+                avatar_url: avatarUrl,
+              });
+            }
+          } else if (!existingProfile.handle) {
+            await admin
+              .from("profiles")
+              .update({ handle, display_name: displayName, avatar_url: avatarUrl })
+              .eq("id", user.id);
           }
         }
       }
 
-      const response = NextResponse.redirect(`${origin}/`);
+      // Read final state and redirect directly (single hop, no hang on "/").
+      let finalProfile: { handle?: string | null; onboarding_completed?: boolean } | null = null;
+      const finalWithFlag = await supabase
+        .from("profiles")
+        .select("handle, onboarding_completed")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!finalWithFlag.error) {
+        finalProfile = finalWithFlag.data ?? null;
+      } else {
+        const finalFallback = await supabase
+          .from("profiles")
+          .select("handle")
+          .eq("id", user.id)
+          .maybeSingle();
+        finalProfile = finalFallback.data ?? null;
+      }
+
+      const redirectTo = finalProfile?.onboarding_completed && finalProfile?.handle
+        ? `${origin}/community/user/${finalProfile.handle}`
+        : `${origin}/onboarding`;
+
+      const response = NextResponse.redirect(redirectTo);
       pendingCookies.forEach(({ name, value, options }) => {
         response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2]);
       });

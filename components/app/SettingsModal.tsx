@@ -86,6 +86,24 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
   // Security
   const [twoFAModal, setTwoFAModal] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState("");
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch("/api/account/delete", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) { setDeleteMsg(data.error || "Failed to delete account"); setDeleteLoading(false); return; }
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch {
+      setDeleteMsg("Something went wrong. Please try again.");
+      setDeleteLoading(false);
+    }
+  };
 
   const tabs: Tab[] = ["account", "community", "notifications", "security"];
 
@@ -518,13 +536,15 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
             style={inputStyle}
             autoFocus
           />
+          {deleteMsg && <p style={{ fontSize: "12px", color: "#e05a4e", marginBottom: "12px" }}>{deleteMsg}</p>}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
-            <button onClick={() => { setDeletingAccount(false); setDeleteConfirm(""); }} style={{ padding: "7px 16px", borderRadius: "8px", background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#a89690", fontSize: "13px", cursor: "pointer" }}>Cancel</button>
+            <button onClick={() => { setDeletingAccount(false); setDeleteConfirm(""); setDeleteMsg(""); }} style={{ padding: "7px 16px", borderRadius: "8px", background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#a89690", fontSize: "13px", cursor: "pointer" }}>Cancel</button>
             <button
-              disabled={deleteConfirm !== "DELETE"}
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirm !== "DELETE" || deleteLoading}
               style={{ padding: "7px 16px", borderRadius: "8px", background: deleteConfirm === "DELETE" ? "#c0392b" : "rgba(192,57,43,0.3)", border: "none", color: "#fff", fontSize: "13px", fontWeight: 500, cursor: deleteConfirm === "DELETE" ? "pointer" : "not-allowed" }}
             >
-              Delete account
+              {deleteLoading ? "Deleting…" : "Delete account"}
             </button>
           </div>
         </SubModal>

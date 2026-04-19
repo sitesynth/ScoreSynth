@@ -58,6 +58,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
 
   // Instrument parts
   const [parts, setParts] = useState<Part[]>([]);
+  const [copyrightConfirmed, setCopyrightConfirmed] = useState(false);
 
   // Collections
   const [collections, setCollections] = useState<{ id: string; name: string; parent_id: string | null }[]>([]);
@@ -458,16 +459,37 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
           </div>
         </div>
 
+        {/* Copyright confirmation */}
+        <label style={{
+          display: "flex", alignItems: "flex-start", gap: "10px",
+          padding: "14px", borderRadius: "10px",
+          background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+          cursor: "pointer",
+        }}>
+          <input
+            type="checkbox"
+            checked={copyrightConfirmed}
+            onChange={e => setCopyrightConfirmed(e.target.checked)}
+            style={{ accentColor: "#c0392b", marginTop: "2px", flexShrink: 0, width: "14px", height: "14px" }}
+          />
+          <span style={{ fontSize: "12px", color: "#a89690", lineHeight: 1.6 }}>
+            I confirm that I own the rights to this content or hold a valid license to distribute it, and I accept full responsibility for any copyright claims arising from this upload, in accordance with the{" "}
+            <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "#c8a97e", textDecoration: "none" }}>Terms of Service</a>
+            {" "}and{" "}
+            <a href="/copyright" target="_blank" rel="noopener noreferrer" style={{ color: "#c8a97e", textDecoration: "none" }}>Copyright Policy</a>.
+          </span>
+        </label>
+
         {error && <p style={{ fontSize: "12px", color: "#c0392b" }}>{error}</p>}
 
         <button
           onClick={handleSubmit}
-          disabled={uploading}
+          disabled={uploading || !copyrightConfirmed}
           style={{
             width: "100%", padding: "12px", borderRadius: "10px",
             background: "#fff", color: "#211817", fontSize: "13px", fontWeight: 600,
-            cursor: uploading ? "not-allowed" : "pointer", border: "none",
-            opacity: uploading ? 0.7 : 1, transition: "opacity 0.15s", marginTop: "4px",
+            cursor: (uploading || !copyrightConfirmed) ? "not-allowed" : "pointer", border: "none",
+            opacity: (uploading || !copyrightConfirmed) ? 0.4 : 1, transition: "opacity 0.15s", marginTop: "4px",
           }}
         >
           {uploading ? `Uploading… (${parts.filter(p => p.file).length > 0 ? "score + parts" : "score"})` : "Publish score"}

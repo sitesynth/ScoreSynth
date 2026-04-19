@@ -167,7 +167,7 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
 
     if (data.user) {
       const { data: profile } = await supabase
-        .from("profiles").select("handle").eq("id", data.user.id).single();
+        .from("profiles").select("handle").eq("id", data.user.id).maybeSingle();
       onSuccess?.();
       onClose();
       if (profile?.handle) {

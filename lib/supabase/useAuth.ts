@@ -17,7 +17,7 @@ export function useAuth() {
         .from("profiles")
         .select("handle")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
       setHandle(data?.handle ?? null);
     }
 

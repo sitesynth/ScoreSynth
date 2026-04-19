@@ -73,7 +73,7 @@ export default function Navbar() {
       .from("profiles")
       .select("display_name, avatar_url")
       .eq("id", user.id)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         if (data) {
           setDisplayName(data.display_name || "");

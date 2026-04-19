@@ -30,7 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
     const supabase = createClient();
-    supabase.from("profiles").select("*").eq("id", user.id).single()
+    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle()
       .then(({ data }) => { if (data) setProfile(data as Profile); });
   }, [user]);
 

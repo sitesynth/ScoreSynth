@@ -67,7 +67,7 @@ function ProfileTab() {
   useEffect(() => {
     if (!user) return;
     const supabase = createClient();
-    supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
+    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data }) => {
       if (data) {
         setProfile(data as Profile);
         setDisplayName(data.display_name || "");

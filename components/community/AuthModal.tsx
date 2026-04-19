@@ -166,16 +166,9 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
     if (authErr) { setError(authErr.message); return; }
 
     if (data.user) {
-      const { data: profile } = await supabase
-        .from("profiles").select("handle").eq("id", data.user.id).maybeSingle();
       onSuccess?.();
       onClose();
-      if (profile?.handle) {
-        router.push(`/community/user/${profile.handle}`);
-      } else {
-        // No profile yet — go to onboarding to set up handle
-        router.push("/onboarding");
-      }
+      router.push("/");
     }
   };
 

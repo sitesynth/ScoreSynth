@@ -18,8 +18,6 @@ export default function OnboardingPage() {
   const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
-    const force = new URLSearchParams(window.location.search).get("force") === "1";
-
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push("/"); return; }
       setUserId(user.id);
@@ -27,10 +25,10 @@ export default function OnboardingPage() {
       // Check if already has profile
       const { data: existingProfile } = await supabase
         .from("profiles")
-        .select("id, handle, display_name")
+        .select("id, handle, display_name, onboarding_completed")
         .eq("id", user.id)
         .maybeSingle();
-      if (existingProfile?.handle && !force) {
+      if (existingProfile?.onboarding_completed && existingProfile?.handle) {
         router.push(`/community/user/${existingProfile.handle}`);
         return;
       }
@@ -87,17 +85,31 @@ export default function OnboardingPage() {
       || currentUser?.user_metadata?.picture
       || null;
 
-    const { error } = await supabase.from("profiles").upsert({
+    const payload = {
       id: userId,
       handle: handle.toLowerCase(),
       display_name: displayName.trim() || handle,
       bio: "",
       avatar_url: avatarUrl,
-    });
+      onboarding_completed: true,
+    };
+    let { error } = await supabase.from("profiles").upsert(payload);
+    if (error && /onboarding_completed/i.test(error.message)) {
+      // Backward compatibility while production schema catches up.
+      const fallback = {
+        id: userId,
+        handle: handle.toLowerCase(),
+        display_name: displayName.trim() || handle,
+        bio: "",
+        avatar_url: avatarUrl,
+      };
+      const retry = await supabase.from("profiles").upsert(fallback);
+      error = retry.error;
+    }
 
     setSaving(false);
     if (error) { setHandleError(error.message); return; }
-    router.push(`/community/user/${handle.toLowerCase()}`);
+    router.push("/");
   };
 
   return (

@@ -1,6 +1,7 @@
 export type Profile = {
   id: string;
   handle: string;
+  onboarding_completed: boolean;
   display_name: string;
   bio: string;
   location: string;

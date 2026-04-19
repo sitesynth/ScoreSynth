@@ -9,6 +9,7 @@ const isConfigured =
 export async function middleware(request: NextRequest) {
   // Skip if Supabase is not yet configured
   if (!isConfigured) return NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
 
   let supabaseResponse = NextResponse.next({ request });
 
@@ -30,7 +31,62 @@ export async function middleware(request: NextRequest) {
   });
 
   // Refresh session — required for @supabase/ssr
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return supabaseResponse;
+
+  let handle: string | null = null;
+  let onboardingCompleted = false;
+
+  // Prefer explicit onboarding flag; tolerate old schema during rollout.
+  const profileWithFlag = await supabase
+    .from("profiles")
+    .select("handle, onboarding_completed")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profileWithFlag.error) {
+    handle = profileWithFlag.data?.handle ?? null;
+    onboardingCompleted = profileWithFlag.data?.onboarding_completed === true;
+  } else {
+    const profileFallback = await supabase
+      .from("profiles")
+      .select("handle")
+      .eq("id", user.id)
+      .maybeSingle();
+    handle = profileFallback.data?.handle ?? null;
+    onboardingCompleted = !!handle;
+  }
+
+  const isOnboarding = pathname.startsWith("/onboarding");
+  const isCallback = pathname.startsWith("/auth/callback");
+  const isApi = pathname.startsWith("/api/");
+  const isHome = pathname === "/";
+
+  if (!onboardingCompleted && !isOnboarding && !isCallback && !isApi) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/onboarding";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (onboardingCompleted && isOnboarding && handle) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/community/user/${handle}`;
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  if (isHome) {
+    const url = request.nextUrl.clone();
+    if (onboardingCompleted && handle) {
+      url.pathname = `/community/user/${handle}`;
+    } else {
+      url.pathname = "/onboarding";
+    }
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }

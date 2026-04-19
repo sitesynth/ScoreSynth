@@ -8,6 +8,7 @@ import AuthModal from "@/components/community/AuthModal";
 export default function Hero() {
   const [email, setEmail] = useState("");
   const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
 
   const handleGoogle = async () => {
     const supabase = createClient();
@@ -85,7 +86,7 @@ export default function Hero() {
 
             {/* CTA */}
             <button
-              onClick={() => setShowAuth(true)}
+              onClick={() => { setAuthMode("signup"); setShowAuth(true); }}
               style={{
                 width: "100%", padding: "12px 16px", borderRadius: "10px",
                 background: "#fff", color: "#211817",
@@ -96,6 +97,17 @@ export default function Hero() {
               onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
             >
               Get started free
+            </button>
+
+            <button
+              onClick={() => { setAuthMode("signin"); setShowAuth(true); }}
+              style={{
+                width: "100%", padding: "10px 16px", borderRadius: "10px",
+                background: "transparent", border: "1px solid rgba(255,255,255,0.2)",
+                color: "#e8dbd8", fontSize: "13px", fontWeight: 500, cursor: "pointer",
+              }}
+            >
+              Already have an account? Sign in
             </button>
 
             <p style={{ fontSize: "11px", color: "#6b5452", textAlign: "center" }}>
@@ -120,7 +132,7 @@ export default function Hero() {
         {showAuth && (
           <AuthModal
             intent="download"
-            initialMode="signup"
+            initialMode={authMode}
             onClose={() => setShowAuth(false)}
             onSuccess={() => setShowAuth(false)}
           />

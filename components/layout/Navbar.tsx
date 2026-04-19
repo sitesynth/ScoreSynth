@@ -53,6 +53,7 @@ function timeAgo(dateStr: string): string {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUserDrop, setShowUserDrop] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
@@ -442,19 +443,43 @@ export default function Navbar() {
                   </div>
                 </>
               ) : (
-                <button
-                  onClick={() => setShowAuth(true)}
-                  style={{
-                    fontSize: "13px", fontWeight: 500,
-                    padding: "8px 18px", borderRadius: "8px",
-                    background: "#fff", color: "#211817",
-                    transition: "opacity 0.15s", border: "none", cursor: "pointer",
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-                >
-                  Join Free
-                </button>
+                <>
+                  <button
+                    onClick={() => { setAuthMode("signin"); setShowAuth(true); }}
+                    style={{
+                      fontSize: "13px", fontWeight: 500,
+                      padding: "8px 16px", borderRadius: "8px",
+                      background: "transparent", color: "#e8dbd8",
+                      border: "1px solid rgba(255,255,255,0.24)", cursor: "pointer",
+                      transition: "background-color 0.15s, border-color 0.15s, color 0.15s",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.07)";
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.42)";
+                      e.currentTarget.style.color = "#fff";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.24)";
+                      e.currentTarget.style.color = "#e8dbd8";
+                    }}
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    onClick={() => { setAuthMode("signup"); setShowAuth(true); }}
+                    style={{
+                      fontSize: "13px", fontWeight: 500,
+                      padding: "8px 18px", borderRadius: "8px",
+                      background: "#fff", color: "#211817",
+                      transition: "opacity 0.15s", border: "none", cursor: "pointer",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                  >
+                    Join Free
+                  </button>
+                </>
               )
             )}
           </div>
@@ -657,18 +682,32 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => { setMobileOpen(false); setShowAuth(true); }}
-                style={{
-                  display: "block", width: "100%", marginTop: "12px",
-                  padding: "14px 16px", borderRadius: "10px",
-                  background: "#fff", color: "#211817",
-                  fontSize: "15px", fontWeight: 600,
-                  textAlign: "center", border: "none", cursor: "pointer",
-                }}
-              >
-                Join Free
-              </button>
+              <>
+                <button
+                  onClick={() => { setMobileOpen(false); setAuthMode("signin"); setShowAuth(true); }}
+                  style={{
+                    display: "block", width: "100%", marginTop: "12px",
+                    padding: "13px 16px", borderRadius: "10px",
+                    background: "transparent", color: "#e8dbd8",
+                    fontSize: "15px", fontWeight: 600,
+                    textAlign: "center", border: "1px solid rgba(255,255,255,0.24)", cursor: "pointer",
+                  }}
+                >
+                  Sign in
+                </button>
+                <button
+                  onClick={() => { setMobileOpen(false); setAuthMode("signup"); setShowAuth(true); }}
+                  style={{
+                    display: "block", width: "100%", marginTop: "12px",
+                    padding: "14px 16px", borderRadius: "10px",
+                    background: "#fff", color: "#211817",
+                    fontSize: "15px", fontWeight: 600,
+                    textAlign: "center", border: "none", cursor: "pointer",
+                  }}
+                >
+                  Join Free
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -676,6 +715,7 @@ export default function Navbar() {
       {showAuth && (
         <AuthModal
           intent="download"
+          initialMode={authMode}
           onClose={() => setShowAuth(false)}
           onSuccess={() => setShowAuth(false)}
         />

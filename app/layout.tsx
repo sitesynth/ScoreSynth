@@ -14,10 +14,7 @@ export const metadata: Metadata = {
     "Discover, upload and share classical sheet music. Browse piano, strings, chamber, orchestral scores and more. Free and premium scores from musicians worldwide.",
   metadataBase: new URL("https://scoresynth.com"),
   icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico" },
-    ],
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: "/icon.svg",
   },
   openGraph: {

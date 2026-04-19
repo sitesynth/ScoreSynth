@@ -142,16 +142,6 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
     if (authErr) { setError(authErr.message); setLoading(false); return; }
     if (!data.user) { setError("Something went wrong. Please try again."); setLoading(false); return; }
 
-    // Create profile immediately (user id is available even before confirmation)
-    await supabase.from("profiles").insert({
-      id: data.user.id,
-      handle: handle.toLowerCase(),
-      display_name: displayName.trim(),
-      bio: "",
-      avatar_url: null,
-      banner_url: null,
-    });
-
     setLoading(false);
     setDone(true);
   };

@@ -168,7 +168,7 @@ export default function AuthModal({ intent, scoreTitle, initialMode = "signin", 
       }
       onSuccess?.();
       onClose();
-      router.push("/");
+      router.push("/auth/continue");
     }
   };
 

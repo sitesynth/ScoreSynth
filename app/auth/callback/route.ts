@@ -163,29 +163,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Read final state and redirect directly (single hop, no hang on "/").
-      let finalProfile: { handle?: string | null; onboarding_completed?: boolean } | null = null;
-      const finalWithFlag = await supabase
-        .from("profiles")
-        .select("handle, onboarding_completed")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (!finalWithFlag.error) {
-        finalProfile = finalWithFlag.data ?? null;
-      } else {
-        const finalFallback = await supabase
-          .from("profiles")
-          .select("handle")
-          .eq("id", user.id)
-          .maybeSingle();
-        finalProfile = finalFallback.data ?? null;
-      }
-
-      const redirectTo = finalProfile?.onboarding_completed && finalProfile?.handle
-        ? `${origin}/community/user/${finalProfile.handle}`
-        : `${origin}/onboarding`;
-
-      const response = NextResponse.redirect(redirectTo);
+      const response = NextResponse.redirect(`${origin}/auth/continue`);
       pendingCookies.forEach(({ name, value, options }) => {
         response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2]);
       });

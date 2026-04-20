@@ -8,6 +8,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AuthModal from "@/components/community/AuthModal";
 import SaveButton from "@/components/community/SaveButton";
+import EditScoreModal from "@/components/community/EditScoreModal";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 import type { Score, Comment } from "@/lib/supabase/types";
@@ -173,6 +174,7 @@ export default function ScoreDetailPage() {
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   useEffect(() => {
     if (!id) return;
     const supabase = createClient();
@@ -715,6 +717,28 @@ export default function ScoreDetailPage() {
                     </svg>
                     Open in Editor
                   </Link>
+
+                  {/* Edit score — owner only */}
+                  {user?.id === score.author_id && (
+                    <button
+                      onClick={() => setShowEditModal(true)}
+                      style={{
+                        width: "100%", padding: "11px", borderRadius: "10px",
+                        background: "transparent", border: "1px solid rgba(255,255,255,0.08)",
+                        color: "#6b5452", fontSize: "13px", fontWeight: 500,
+                        cursor: "pointer", display: "flex", alignItems: "center",
+                        justifyContent: "center", gap: "6px", transition: "all 0.15s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(192,57,43,0.35)"; e.currentTarget.style.color = "#c0392b"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "#6b5452"; }}
+                    >
+                      <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                      Edit score
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -730,6 +754,14 @@ export default function ScoreDetailPage() {
           scoreTitle={score.title}
           onClose={() => setShowAuthModal(false)}
           onSuccess={() => setShowAuthModal(false)}
+        />
+      )}
+
+      {showEditModal && (
+        <EditScoreModal
+          score={score}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={(updated) => { setScore(updated); setShowEditModal(false); }}
         />
       )}
     </>

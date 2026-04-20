@@ -57,6 +57,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
   const [instruments, setInstruments] = useState((score.instruments ?? []).join(", "));
   const [tag,         setTag]         = useState<"free" | "premium">((score.tag as "free" | "premium") ?? "free");
   const [priceDisplay, setPriceDisplay] = useState(score.price_display ?? "");
+  const [pages,       setPages]       = useState<string>(score.pages ? String(score.pages) : "");
   const [coverFile,   setCoverFile]   = useState<File | null>(null);
   const [pdfFile,     setPdfFile]     = useState<File | null>(null);
   const [audioFile,   setAudioFile]   = useState<File | null>(null);
@@ -139,6 +140,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       category,
       difficulty,
       instruments:   instruments.split(",").map(s => s.trim()).filter(Boolean),
+      pages:         pages ? parseInt(pages, 10) : null,
       tag,
       price_display: tag === "premium" && priceDisplay ? priceDisplay.trim() : null,
       cover_url:     coverUrl,
@@ -219,13 +221,23 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
           </select>
         </div>
 
-        <input
-          type="text"
-          placeholder="Instruments (comma-separated)"
-          value={instruments}
-          onChange={e => setInstruments(e.target.value)}
-          style={inputStyle}
-        />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 100px", gap: "10px" }}>
+          <input
+            type="text"
+            placeholder="Instruments (comma-separated)"
+            value={instruments}
+            onChange={e => setInstruments(e.target.value)}
+            style={inputStyle}
+          />
+          <input
+            type="number"
+            placeholder="Pages"
+            min={1}
+            value={pages}
+            onChange={e => setPages(e.target.value)}
+            style={{ ...inputStyle, appearance: "none" } as React.CSSProperties}
+          />
+        </div>
 
         {/* Tag */}
         <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>

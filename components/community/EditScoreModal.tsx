@@ -142,7 +142,6 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
 
   return (
     <div
-      onClick={onClose}
       style={{
         position: "fixed", inset: 0, zIndex: 100,
         background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)",
@@ -151,7 +150,6 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       }}
     >
       <div
-        onClick={e => e.stopPropagation()}
         style={{
           background: "#2a1f1e", borderRadius: "20px",
           border: "1px solid rgba(255,255,255,0.1)",

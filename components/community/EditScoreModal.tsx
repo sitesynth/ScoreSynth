@@ -102,9 +102,11 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
     // Upload audio recording if provided
     let audioUrl = score.midi_url ?? null;
     if (audioFile) {
-      const ap = `${user.id}/audio/${Date.now()}-${audioFile.name}`;
+      const ext = audioFile.name.split(".").pop()?.toLowerCase() ?? "mp3";
+      const ap = `${user.id}/audio/${Date.now()}.${ext}`;
       const { error: audioErr } = await supabase.storage.from("score-files").upload(ap, audioFile);
-      if (!audioErr) audioUrl = ap;
+      if (audioErr) { setError(`Audio upload failed: ${audioErr.message}`); setSaving(false); return; }
+      audioUrl = ap;
     }
 
     const updates = {

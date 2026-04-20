@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import ScoreCard from "@/components/community/ScoreCard";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import AuthModal from "@/components/community/AuthModal";
@@ -74,15 +74,16 @@ function InlineField({
 }
 
 // ─── Collection card (Pinterest style) ──────────────────────────────────────
-type Collection = { id: string; name: string; count: number; covers: (string | null)[]; parent_id: string | null; cover_url?: string | null };
+type Collection = { id: string; name: string; count: number; covers: (string | null)[]; parent_id: string | null; cover_url?: string | null; is_public?: boolean };
 
-function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverChange }: {
+function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverChange, onTogglePublic }: {
   coll: Collection;
   onClick: () => void;
   isOwner?: boolean;
   onDelete?: () => void;
   onRename?: (newName: string) => void;
   onCoverChange?: (file: File) => void;
+  onTogglePublic?: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -173,6 +174,20 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverCha
         />
       )}
 
+      {/* Privacy badge (owner-only) */}
+      {isOwner && coll.is_public === false && coll.id !== "all" && coll.id !== "unsorted" && (
+        <div style={{
+          position: "absolute", bottom: "8px", left: "8px", zIndex: 5,
+          background: "rgba(0,0,0,0.6)", borderRadius: "6px",
+          padding: "3px 7px", display: "flex", alignItems: "center", gap: "4px",
+        }}>
+          <svg width="10" height="10" fill="none" stroke="#a89690" strokeWidth="2" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+          <span style={{ fontSize: "10px", color: "#a89690" }}>Private</span>
+        </div>
+      )}
+
       {/* Owner menu button */}
       {isOwner && coll.id !== "all" && (
         <div ref={menuRef} style={{ position: "absolute", top: "8px", right: "8px", zIndex: 10 }}>
@@ -235,6 +250,40 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverCha
                 </svg>
                 Rename
               </button>
+              {onTogglePublic && coll.id !== "unsorted" && (
+                <>
+                  <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
+                  <button
+                    onClick={e => { e.stopPropagation(); setMenuOpen(false); onTogglePublic(); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "8px",
+                      width: "100%", padding: "8px 10px", background: "none",
+                      border: "none", color: "#e8dbd8", fontSize: "13px",
+                      cursor: "pointer", borderRadius: "6px", textAlign: "left",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    {coll.is_public === false ? (
+                      <>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                          <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+                        </svg>
+                        Make Public
+                      </>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                        </svg>
+                        Make Private
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+              <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
               <button
                 onClick={e => { e.stopPropagation(); setMenuOpen(false); onDelete?.(); }}
                 style={{
@@ -275,6 +324,7 @@ export default function PublicUserProfilePage() {
   const { handle } = useParams<{ handle: string }>();
   const { user: currentUser } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [profileUser, setProfileUser] = useState<Profile | null>(null);
   const [userScores, setUserScores] = useState<Score[]>([]);
@@ -282,7 +332,9 @@ export default function PublicUserProfilePage() {
   const [savedCollectionIds, setSavedCollectionIds] = useState<(string | null)[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollection, setActiveCollection] = useState<string | "all" | null>(null); // null = overview
-  const [activeTab, setActiveTab] = useState<"resources" | "saved">("resources");
+  const [activeTab, setActiveTab] = useState<"resources" | "saved">(
+    searchParams.get("tab") === "saved" ? "saved" : "resources"
+  );
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -318,7 +370,17 @@ export default function PublicUserProfilePage() {
 
   // Resource collections state
   const [resourceColls, setResourceColls] = useState<Collection[]>([]);
-  const [activeResourceColl, setActiveResourceColl] = useState<string | "all" | null>(null);
+  const [activeResourceColl, setActiveResourceColl] = useState<string | "all" | null>(
+    searchParams.get("coll") ?? null
+  );
+
+  const setResourceColl = (val: string | null) => {
+    setActiveResourceColl(val);
+    const params = new URLSearchParams(window.location.search);
+    if (val) params.set("coll", val);
+    else params.delete("coll");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
   const [newRcollName, setNewRcollName] = useState("");
   const [addingRcoll, setAddingRcoll] = useState(false);
   const [showCreateCollModal, setShowCreateCollModal] = useState(false);
@@ -390,8 +452,8 @@ export default function PublicUserProfilePage() {
 
       // Load resource collections
       const { data: rcollData } = await supabase.from("resource_collections")
-        .select("id, name, parent_id, cover_url").eq("user_id", p.id).order("created_at");
-      const rawRcolls = (rcollData ?? []) as { id: string; name: string; parent_id: string | null; cover_url: string | null }[];
+        .select("id, name, parent_id, cover_url, is_public").eq("user_id", p.id).order("created_at");
+      const rawRcolls = (rcollData ?? []) as { id: string; name: string; parent_id: string | null; cover_url: string | null; is_public: boolean }[];
       // Helper: get all descendant collection ids (including self)
       const getAllDescendantIds = (collId: string, allColls: typeof rawRcolls): string[] => {
         const children = allColls.filter(c => c.parent_id === collId);
@@ -402,7 +464,7 @@ export default function PublicUserProfilePage() {
         const allIds = getAllDescendantIds(c.id, rawRcolls);
         const collScores = scores.filter(s => s.resource_collection_id && allIds.includes(s.resource_collection_id));
         const directScores = scores.filter(s => s.resource_collection_id === c.id);
-        return { id: c.id, name: c.name, parent_id: c.parent_id ?? null, cover_url: c.cover_url ?? null, count: collScores.length, covers: directScores.slice(0, 4).map(s => s.cover_url ?? null) };
+        return { id: c.id, name: c.name, parent_id: c.parent_id ?? null, cover_url: c.cover_url ?? null, is_public: c.is_public ?? true, count: collScores.length, covers: directScores.slice(0, 4).map(s => s.cover_url ?? null) };
       });
       setResourceColls(rcolls);
 
@@ -592,6 +654,16 @@ export default function PublicUserProfilePage() {
     const supabase = createClient();
     await supabase.from("resource_collections").update({ name: newName }).eq("id", collId).eq("user_id", currentUser.id);
     setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, name: newName } : c));
+  };
+
+  const handleTogglePublicResourceColl = async (collId: string) => {
+    if (!currentUser) return;
+    const coll = resourceColls.find(c => c.id === collId);
+    if (!coll) return;
+    const newVal = !(coll.is_public ?? true);
+    const supabase = createClient();
+    await supabase.from("resource_collections").update({ is_public: newVal }).eq("id", collId).eq("user_id", currentUser.id);
+    setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, is_public: newVal } : c));
   };
 
   const handleUpdateCollectionCover = (collId: string, file: File) => {
@@ -970,7 +1042,7 @@ export default function PublicUserProfilePage() {
                       { key: "resources", label: "Resources", count: userScores.length },
                       ...(isOwner ? [{ key: "saved", label: "Saved", count: savedScores.length }] : []),
                     ] as { key: "resources" | "saved"; label: string; count: number }[]).map(tab => (
-                      <button key={tab.key} onClick={() => { setActiveTab(tab.key); setActiveCollection(null); }}
+                      <button key={tab.key} onClick={() => { setActiveTab(tab.key); setActiveCollection(null); setResourceColl(null); router.replace(`?tab=${tab.key}`, { scroll: false }); }}
                         style={{
                           padding: "8px 16px", fontSize: "13px", fontWeight: 500,
                           cursor: "pointer", background: "none", border: "none",
@@ -998,7 +1070,7 @@ export default function PublicUserProfilePage() {
                           const parentColl = currentColl?.parent_id ? resourceColls.find(c => c.id === currentColl.parent_id) : null;
                           return (
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                              <button onClick={() => setActiveResourceColl(currentColl?.parent_id ?? null)}
+                              <button onClick={() => setResourceColl(currentColl?.parent_id ?? null)}
                                 style={{ fontSize: "13px", color: "#6b5452", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px" }}>
                                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
                                 {parentColl ? parentColl.name : "Collections"}
@@ -1041,17 +1113,18 @@ export default function PublicUserProfilePage() {
                               {/* "All resources" card */}
                               <CollectionCard
                                 coll={{ id: "all", name: "All resources", count: userScores.length, covers: userScores.slice(0, 4).map(s => s.cover_url ?? null), parent_id: null }}
-                                onClick={() => setActiveResourceColl("all")}
+                                onClick={() => setResourceColl("all")}
                               />
                               {/* Named collections (top-level only) */}
-                              {resourceColls.filter(c => c.parent_id === null).map(c => (
+                              {resourceColls.filter(c => c.parent_id === null && (isOwner || c.is_public !== false)).map(c => (
                                 <CollectionCard
                                   key={c.id} coll={c}
-                                  onClick={() => setActiveResourceColl(c.id)}
+                                  onClick={() => setResourceColl(c.id)}
                                   isOwner={isOwner}
                                   onDelete={() => handleDeleteResourceColl(c.id)}
                                   onRename={name => handleRenameResourceColl(c.id, name)}
                                   onCoverChange={isOwner ? (file) => handleUpdateCollectionCover(c.id, file) : undefined}
+                                  onTogglePublic={isOwner ? () => handleTogglePublicResourceColl(c.id) : undefined}
                                 />
                               ))}
                               {/* Unsorted */}
@@ -1060,7 +1133,7 @@ export default function PublicUserProfilePage() {
                                 return unsorted.length > 0 && resourceColls.filter(c => c.parent_id === null).length > 0 ? (
                                   <CollectionCard
                                     coll={{ id: "unsorted", name: "Unsorted", count: unsorted.length, covers: unsorted.slice(0, 4).map(s => s.cover_url ?? null), parent_id: null }}
-                                    onClick={() => setActiveResourceColl("unsorted" as string)}
+                                    onClick={() => setResourceColl("unsorted")}
                                   />
                                 ) : null;
                               })()}
@@ -1087,14 +1160,15 @@ export default function PublicUserProfilePage() {
                               <div style={{ marginBottom: "20px" }}>
                                 <p style={{ fontSize: "11px", color: "#6b5452", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "10px" }}>Folders</p>
                                 <div className="scores-grid">
-                                  {subFolders.map(c => (
+                                  {subFolders.filter(c => isOwner || c.is_public !== false).map(c => (
                                     <CollectionCard
                                       key={c.id} coll={c}
-                                      onClick={() => setActiveResourceColl(c.id)}
+                                      onClick={() => setResourceColl(c.id)}
                                       isOwner={isOwner}
                                       onDelete={() => handleDeleteResourceColl(c.id)}
                                       onRename={name => handleRenameResourceColl(c.id, name)}
-                                  onCoverChange={isOwner ? (file) => handleUpdateCollectionCover(c.id, file) : undefined}
+                                      onCoverChange={isOwner ? (file) => handleUpdateCollectionCover(c.id, file) : undefined}
+                                      onTogglePublic={isOwner ? () => handleTogglePublicResourceColl(c.id) : undefined}
                                     />
                                   ))}
                                 </div>

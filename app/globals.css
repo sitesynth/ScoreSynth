@@ -243,11 +243,18 @@
   /* Profile page */
   .profile-banner    { height: 110px !important; }
   .profile-wrap      { padding: 0 16px 60px !important; }
-  .profile-avatar-row { margin-top: -32px !important; align-items: flex-start !important; }
-  .profile-action-btns { gap: 8px !important; }
+  .profile-avatar-row { margin-top: -32px !important; align-items: flex-start !important; flex-wrap: wrap !important; row-gap: 0 !important; }
+  .profile-action-btns { gap: 8px !important; width: 100% !important; margin-top: 14px !important; justify-content: flex-start !important; }
   .profile-two-col   { flex-direction: column !important; gap: 20px !important; }
   .profile-sidebar   { width: 100% !important; }
   .scores-grid       { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+
+  /* Score detail page */
+  .score-back-wrap   { padding: 16px 16px 0 !important; }
+  .score-detail-grid { grid-template-columns: 1fr !important; padding: 16px 16px 60px !important; gap: 0 !important; }
+  .score-detail-sidebar { order: -1 !important; position: static !important; margin-bottom: 24px !important; }
+  .score-detail-left { order: 1 !important; }
+  .score-pdf-iframe  { height: 420px !important; }
 }
 
 /* Tablet only (768–1023px) */

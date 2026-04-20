@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import type { Score } from "@/lib/supabase/types";
 
 interface Props {
@@ -13,10 +13,14 @@ interface Props {
 export default function ScoreCard({ score, isOwner, onEdit }: Props) {
   const [hovered, setHovered] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <div
-      onClick={() => router.push(`/community/${score.id}`)}
+      onClick={() => {
+        sessionStorage.setItem("scoreFrom", pathname + window.location.search);
+        router.push(`/community/${score.id}`);
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -48,24 +52,31 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
           ? `#f5f0eb url("${score.cover_url}") top center / cover no-repeat`
           : "#1a1210",
       }}>
-        {/* No-cover: A4 paper placeholder */}
+        {/* No-cover: sheet music placeholder */}
         {!score.cover_url && (
           <div style={{
             position: "absolute",
-            top: "6%", left: "12%", right: "12%", bottom: "-60%",
+            top: "6%", left: "12%", right: "12%", bottom: "-55%",
             background: "#faf8f5",
             boxShadow: hovered ? "0 10px 32px rgba(0,0,0,0.6)" : "0 5px 18px rgba(0,0,0,0.45)",
             transform: hovered ? "scale(1.03)" : "scale(1)",
             transition: "transform 0.3s ease, box-shadow 0.3s ease",
             display: "flex", flexDirection: "column", alignItems: "center",
-            paddingTop: "12%",
+            paddingTop: "10%",
+            gap: 0,
           }}>
-            <svg width="18" height="32" viewBox="0 0 20 36" fill="none" style={{ opacity: 0.12, marginBottom: "6%" }}>
-              <path d="M10 1 C10 1 4 9 4 17 C4 24 8 27 10 29 C12 31 14 33 14 36" stroke="#1a1210" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
-              <path d="M10 1 C14 5 16 11 16 16 C16 21 13 24 10 26" stroke="#1a1210" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+            {/* Treble clef */}
+            <svg width="22" height="40" viewBox="0 0 22 40" fill="none" style={{ opacity: 0.22, marginBottom: "5%", flexShrink: 0 }}>
+              <path d="M11 2 C11 2 6 8 6 16 C6 22 9 25 11 27 C13 29 15 31 15 35 C15 38 13 39 11 39 C9 39 7 38 7 36" stroke="#1a1210" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+              <path d="M11 2 C15 5 17 10 17 15 C17 20 14 23 11 25" stroke="#1a1210" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+              <circle cx="9" cy="35" r="2.5" fill="#1a1210" opacity="0.4"/>
             </svg>
+            {/* Staff lines — 2 groups of 5 */}
             {[0,1,2,3,4].map(i => (
-              <div key={i} style={{ width: "68%", height: "1px", background: "rgba(26,18,16,0.15)", marginBottom: i < 4 ? "6%" : 0 }} />
+              <div key={`a${i}`} style={{ width: "75%", height: "1px", background: "rgba(26,18,16,0.18)", marginBottom: i < 4 ? "5%" : "10%" }} />
+            ))}
+            {[0,1,2,3,4].map(i => (
+              <div key={`b${i}`} style={{ width: "75%", height: "1px", background: "rgba(26,18,16,0.12)", marginBottom: i < 4 ? "5%" : 0 }} />
             ))}
           </div>
         )}

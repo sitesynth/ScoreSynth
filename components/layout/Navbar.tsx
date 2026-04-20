@@ -33,6 +33,9 @@ function notifHref(n: NotificationItem): string {
         ? `/community/${n.score_id}`
         : "/community/notifications";
     case "follow":
+      return n.actor_handle
+        ? `/community/user/${n.actor_handle}`
+        : "/community/notifications";
     default:
       return "/community/notifications";
   }

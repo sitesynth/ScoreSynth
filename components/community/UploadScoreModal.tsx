@@ -176,7 +176,8 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
     // Upload audio recording
     let audioPath: string | null = null;
     if (audioFile) {
-      const ap = `${user.id}/audio/${Date.now()}-${audioFile.name}`;
+      const ext = audioFile.name.split(".").pop()?.toLowerCase() ?? "mp3";
+      const ap = `${user.id}/audio/${Date.now()}.${ext}`;
       const { error: audioErr } = await supabase.storage.from("score-files").upload(ap, audioFile);
       if (!audioErr) audioPath = ap;
     }

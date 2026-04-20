@@ -236,6 +236,20 @@ create policy "score_files_upload" on storage.objects
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
+-- score-files: users delete their own files (needed to replace recordings)
+create policy "score_files_delete" on storage.objects
+  for delete using (
+    bucket_id = 'score-files'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- score-files: users update their own files
+create policy "score_files_update" on storage.objects
+  for update using (
+    bucket_id = 'score-files'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
 -- score-files: authenticated users can download
 create policy "score_files_read" on storage.objects
   for select using (

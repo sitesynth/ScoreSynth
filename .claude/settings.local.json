@@ -20,7 +20,10 @@
       "Bash(npm install *)",
       "Bash(npm uninstall *)",
       "Bash(git fetch *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(npx tsc *)",
+      "Bash(xargs grep *)",
+      "Bash(find /c/Users/mayya/Desktop/SITES/ScoreSynth -name \"*.sql\" -exec wc -l {} \\\\;)"
     ]
   }
 }

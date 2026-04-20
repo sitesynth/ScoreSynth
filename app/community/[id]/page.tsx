@@ -47,14 +47,38 @@ function AudioPlayer({ src, title }: { src: string; title: string }) {
 
   return (
     <div style={{
-      borderRadius: "14px", overflow: "hidden",
-      background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)",
-      marginBottom: "24px", padding: "16px 18px",
-      display: "flex", flexDirection: "column", gap: "10px",
+      borderRadius: "16px",
+      background: "linear-gradient(135deg, #261a18 0%, #1e1513 100%)",
+      border: "1px solid rgba(192,57,43,0.18)",
+      padding: "18px 20px 16px",
+      display: "flex", flexDirection: "column", gap: "14px",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
     }}>
-      <p style={{ fontSize: "11px", color: "#6b5452", letterSpacing: "0.08em", textTransform: "uppercase", margin: 0 }}>
-        Audio Recording
-      </p>
+
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{
+          width: "28px", height: "28px", borderRadius: "8px", flexShrink: 0,
+          background: "rgba(192,57,43,0.15)", border: "1px solid rgba(192,57,43,0.25)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <svg width="13" height="13" fill="none" stroke="#c0392b" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: "#e8dbd8", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {title}
+          </p>
+          <p style={{ fontSize: "10px", color: "#6b5452", margin: "2px 0 0", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            Audio Recording
+          </p>
+        </div>
+        <span style={{ fontSize: "11px", color: "#6b5452", flexShrink: 0, fontVariantNumeric: "tabular-nums", letterSpacing: "0.04em" }}>
+          {fmt(current)} / {fmt(duration)}
+        </span>
+      </div>
+
       <audio
         ref={audioRef}
         src={src}
@@ -64,61 +88,66 @@ function AudioPlayer({ src, title }: { src: string; title: string }) {
           if (!dragging) setProgress((a.currentTime / a.duration) * 100 || 0);
         }}
         onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
-        onEnded={() => { setPlaying(false); setProgress(0); setCurrent(0); if(audioRef.current) audioRef.current.currentTime = 0; }}
+        onEnded={() => { setPlaying(false); setProgress(0); setCurrent(0); if (audioRef.current) audioRef.current.currentTime = 0; }}
       />
 
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      {/* Controls row */}
+      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
         {/* Play/Pause */}
         <button
           onClick={toggle}
           style={{
-            width: "40px", height: "40px", borderRadius: "50%", flexShrink: 0,
-            background: "#c0392b", border: "none", cursor: "pointer",
+            width: "44px", height: "44px", borderRadius: "50%", flexShrink: 0,
+            background: playing ? "#a93226" : "#c0392b",
+            border: "none", cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "background 0.15s",
+            boxShadow: playing ? "0 0 0 6px rgba(192,57,43,0.15)" : "0 2px 12px rgba(192,57,43,0.4)",
+            transition: "all 0.2s ease",
           }}
-          onMouseEnter={e => (e.currentTarget.style.background = "#a93226")}
-          onMouseLeave={e => (e.currentTarget.style.background = "#c0392b")}
+          onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.08)")}
+          onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
         >
           {playing ? (
             <svg width="14" height="14" fill="#fff" viewBox="0 0 24 24">
-              <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+              <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
             </svg>
           ) : (
-            <svg width="14" height="14" fill="#fff" viewBox="0 0 24 24">
+            <svg width="14" height="14" fill="#fff" viewBox="0 0 24 24" style={{ marginLeft: "2px" }}>
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
           )}
         </button>
 
-        {/* Title + progress */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: "12px", color: "#e8dbd8", margin: "0 0 7px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {title}
-          </p>
-          {/* Progress bar */}
-          <div
-            ref={barRef}
-            onClick={seek}
-            onMouseDown={() => setDragging(true)}
-            onMouseUp={() => setDragging(false)}
-            style={{
-              height: "4px", borderRadius: "2px", background: "rgba(255,255,255,0.1)",
-              cursor: "pointer", position: "relative",
-            }}
-          >
+        {/* Progress bar */}
+        <div style={{ flex: 1, position: "relative", cursor: "pointer", padding: "8px 0" }}
+          ref={barRef}
+          onClick={seek}
+          onMouseDown={() => setDragging(true)}
+          onMouseUp={() => setDragging(false)}
+        >
+          {/* Track */}
+          <div style={{ height: "3px", borderRadius: "2px", background: "rgba(255,255,255,0.08)" }}>
+            {/* Fill */}
             <div style={{
-              position: "absolute", left: 0, top: 0, height: "100%",
-              width: `${progress}%`, borderRadius: "2px",
-              background: "#c0392b", transition: dragging ? "none" : "width 0.1s linear",
-            }} />
+              height: "100%", borderRadius: "2px",
+              width: `${progress}%`,
+              background: "linear-gradient(90deg, #c0392b, #e74c3c)",
+              transition: dragging ? "none" : "width 0.1s linear",
+              position: "relative",
+            }}>
+              {/* Thumb */}
+              <div style={{
+                position: "absolute", right: "-5px", top: "50%",
+                transform: "translateY(-50%)",
+                width: "10px", height: "10px", borderRadius: "50%",
+                background: "#e8dbd8",
+                boxShadow: "0 0 0 2px rgba(192,57,43,0.5)",
+                opacity: dragging || progress > 0 ? 1 : 0,
+                transition: "opacity 0.15s",
+              }} />
+            </div>
           </div>
         </div>
-
-        {/* Time */}
-        <span style={{ fontSize: "11px", color: "#6b5452", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-          {fmt(current)} / {fmt(duration)}
-        </span>
       </div>
     </div>
   );
@@ -143,7 +172,7 @@ export default function ScoreDetailPage() {
   const [loadingScore, setLoadingScore] = useState(true);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!id) return;
     const supabase = createClient();
@@ -262,9 +291,14 @@ export default function ScoreDetailPage() {
       <main style={{ paddingTop: "80px", background: "#211817", minHeight: "100vh" }}>
 
         {/* Back link */}
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px 32px 0" }}>
+        <div className="score-back-wrap" style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px 32px 0" }}>
           <button
-            onClick={() => router.back()}
+            onClick={() => {
+              const from = sessionStorage.getItem("scoreFrom");
+              sessionStorage.removeItem("scoreFrom");
+              if (from) router.push(from);
+              else router.back();
+            }}
             style={{ fontSize: "13px", color: "#7a6360", background: "none", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", padding: 0 }}
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -274,10 +308,10 @@ export default function ScoreDetailPage() {
           </button>
         </div>
 
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px 32px 80px", display: "grid", gridTemplateColumns: "1fr 340px", gap: "40px", alignItems: "start" }}>
+        <div className="score-detail-grid" style={{ maxWidth: "1100px", margin: "0 auto", padding: "24px 32px 80px", display: "grid", gridTemplateColumns: "1fr 340px", gap: "40px", alignItems: "start" }}>
 
           {/* Left — score preview + comments */}
-          <div>
+          <div className="score-detail-left">
             {/* Cover image */}
             {score.cover_url && (
               <div style={{ borderRadius: "16px", overflow: "hidden", background: "#f5f0eb", marginBottom: "16px" }}>
@@ -292,12 +326,13 @@ export default function ScoreDetailPage() {
 
             {/* PDF Preview */}
             {pdfPreviewUrl && (
-              <div style={{ borderRadius: "16px", overflow: "hidden", background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)", marginBottom: "32px" }}>
+              <div className="score-pdf-preview" style={{ borderRadius: "16px", overflow: "hidden", background: "#1e1513", border: "1px solid rgba(255,255,255,0.07)", marginBottom: "32px" }}>
                 <p style={{ fontSize: "11px", color: "#6b5452", padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   Sheet music preview
                 </p>
                 <iframe
                   src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0&page=1&view=FitH`}
+                  className="score-pdf-iframe"
                   style={{ width: "100%", height: "600px", border: "none", background: "#fff" }}
                   title="Sheet music preview"
                 />
@@ -405,7 +440,7 @@ export default function ScoreDetailPage() {
           </div>
 
           {/* Right sidebar */}
-          <div style={{ position: "sticky", top: "96px" }}>
+          <div className="score-detail-sidebar" style={{ position: "sticky", top: "96px" }}>
             {/* Tag */}
             <span style={{
               fontSize: "11px", padding: "3px 10px", borderRadius: "4px",
@@ -480,6 +515,7 @@ export default function ScoreDetailPage() {
               </div>
             )}
 
+
             {/* Actions */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <SaveButton
@@ -503,6 +539,44 @@ export default function ScoreDetailPage() {
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                 </svg>
                 {liked ? "Liked" : "Like"}
+              </button>
+
+              <button
+                onClick={async () => {
+                  const url = window.location.href;
+                  if (navigator.share) {
+                    try { await navigator.share({ title: score.title, text: score.composer ? `${score.title} — ${score.composer}` : score.title, url }); } catch { /* dismissed */ }
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }
+                }}
+                style={{
+                  width: "100%", padding: "11px", borderRadius: "10px",
+                  background: copied ? "rgba(111,207,151,0.12)" : "rgba(255,255,255,0.05)",
+                  border: `1px solid ${copied ? "rgba(111,207,151,0.35)" : "rgba(255,255,255,0.1)"}`,
+                  color: copied ? "#6fcf97" : "#a89690", fontSize: "13px", fontWeight: 500,
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                  transition: "all 0.2s",
+                }}
+              >
+                {copied ? (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
+                    Share
+                  </>
+                )}
               </button>
 
               {score.tag === "premium" ? (

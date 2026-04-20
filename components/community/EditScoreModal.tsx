@@ -60,8 +60,18 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
   const [coverFile,   setCoverFile]   = useState<File | null>(null);
   const [pdfFile,     setPdfFile]     = useState<File | null>(null);
   const [audioFile,   setAudioFile]   = useState<File | null>(null);
+  // Existing parts (from DB) that haven't been removed
+  const [existingParts, setExistingParts] = useState<{ name: string; pdf_url: string }[]>(score.parts ?? []);
+  // New parts being added
+  const [newParts, setNewParts] = useState<{ name: string; file: File | null }[]>([]);
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState<string | null>(null);
+
+  const addPart = () => setNewParts(p => [...p, { name: "", file: null }]);
+  const removeNewPart = (i: number) => setNewParts(p => p.filter((_, idx) => idx !== i));
+  const updateNewPartName = (i: number, name: string) => setNewParts(p => p.map((pt, idx) => idx === i ? { ...pt, name } : pt));
+  const updateNewPartFile = (i: number, file: File | null) => setNewParts(p => p.map((pt, idx) => idx === i ? { ...pt, file } : pt));
+  const removeExistingPart = (i: number) => setExistingParts(p => p.filter((_, idx) => idx !== i));
 
   const handleSave = async () => {
     if (!title.trim()) { setError("Title is required."); return; }
@@ -109,6 +119,18 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       audioUrl = ap;
     }
 
+    // Upload new parts
+    const uploadedNewParts: { name: string; pdf_url: string }[] = [];
+    for (const part of newParts) {
+      if (!part.name.trim() || !part.file) continue;
+      const ext = part.file.name.split(".").pop()?.toLowerCase() ?? "pdf";
+      const partPath = `${user.id}/parts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: partErr } = await supabase.storage.from("score-files").upload(partPath, part.file);
+      if (partErr) { setError(`Part upload failed: ${partErr.message}`); setSaving(false); return; }
+      uploadedNewParts.push({ name: part.name.trim(), pdf_url: partPath });
+    }
+    const allParts = [...existingParts, ...uploadedNewParts];
+
     const updates = {
       title:         title.trim(),
       composer:      composer.trim(),
@@ -122,6 +144,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       cover_url:     coverUrl,
       pdf_url:       pdfUrl,
       midi_url:      audioUrl,
+      parts:         allParts,
       updated_at:    new Date().toISOString(),
     };
 
@@ -354,6 +377,132 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
           </label>
           {audioFile && (
             <audio controls src={URL.createObjectURL(audioFile)} style={{ width: "100%", marginTop: "8px", height: "36px" }} />
+          )}
+        </div>
+
+        {/* ── Instrument Parts ── */}
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "16px" }}>
+          <div style={{ marginBottom: "12px" }}>
+            <p style={{ fontSize: "13px", fontWeight: 600, color: "#e8dbd8", margin: "0 0 3px" }}>Instrument Parts</p>
+            <p style={{ fontSize: "11px", color: "#6b5452", margin: 0, lineHeight: 1.5 }}>
+              Upload individual parts (Violin I, Cello, Trumpet…) so players can download separately.
+            </p>
+          </div>
+
+          {/* Existing parts */}
+          {existingParts.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "8px" }}>
+              {existingParts.map((part, i) => (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center", gap: "8px",
+                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: "10px", padding: "8px 10px",
+                }}>
+                  <svg width="12" height="12" fill="none" stroke="#6b5452" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                  <span style={{ flex: 1, fontSize: "12px", color: "#c8b8b6", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {part.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeExistingPart(i)}
+                    title="Remove part"
+                    style={{ background: "none", border: "none", color: "#4a3532", cursor: "pointer", padding: "4px", borderRadius: "6px", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#c0392b")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#4a3532")}
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* New parts being added */}
+          {newParts.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "8px" }}>
+              {newParts.map((part, i) => (
+                <div key={i} style={{
+                  display: "grid", gridTemplateColumns: "1fr 1fr auto",
+                  gap: "8px", alignItems: "center",
+                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(192,57,43,0.2)",
+                  borderRadius: "10px", padding: "8px 10px",
+                }}>
+                  <input
+                    type="text"
+                    placeholder="Name, e.g. Violin I"
+                    value={part.name}
+                    onChange={e => updateNewPartName(i, e.target.value)}
+                    style={{ ...inputStyle, padding: "7px 10px", fontSize: "12px", background: "rgba(255,255,255,0.05)" }}
+                  />
+                  <label style={{
+                    display: "flex", alignItems: "center", gap: "6px",
+                    padding: "7px 10px", borderRadius: "8px", cursor: "pointer",
+                    background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.1)",
+                    fontSize: "12px", color: part.file ? "#c8a97e" : "#6b5452", overflow: "hidden",
+                  }}>
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {part.file ? part.file.name : "Choose PDF…"}
+                    </span>
+                    <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => updateNewPartFile(i, e.target.files?.[0] ?? null)} />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeNewPart(i)}
+                    style={{ background: "none", border: "none", color: "#4a3532", cursor: "pointer", padding: "4px", borderRadius: "6px", display: "flex", alignItems: "center", transition: "color 0.15s" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#c0392b")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#4a3532")}
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add part button */}
+          {existingParts.length === 0 && newParts.length === 0 ? (
+            <button
+              type="button"
+              onClick={addPart}
+              style={{
+                width: "100%", padding: "14px", borderRadius: "10px",
+                border: "1px dashed rgba(255,255,255,0.1)", background: "transparent",
+                color: "#6b5452", fontSize: "12px", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)"; e.currentTarget.style.color = "#e8dbd8"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#6b5452"; }}
+            >
+              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add instrument part
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={addPart}
+              style={{
+                padding: "6px 14px", borderRadius: "8px", fontSize: "12px", fontWeight: 500,
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                color: "#c8b8b6", cursor: "pointer", display: "flex", alignItems: "center", gap: "5px",
+              }}
+            >
+              <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add part
+            </button>
           )}
         </div>
 

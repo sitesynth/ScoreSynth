@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
       .select(col)
       .eq("id", record.user_id)
       .single();
-    if (prefs && prefs[col] === false) {
+    if (prefs && (prefs as Record<string, unknown>)[col] === false) {
       return NextResponse.json({ ok: true, skipped: "user opted out" });
     }
   }

@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-type Tab = "email" | "password" | "danger";
+type Tab = "email" | "password" | "notifications" | "danger";
+
+type NotifPrefs = {
+  email_notify_messages: boolean;
+  email_notify_likes: boolean;
+  email_notify_comments: boolean;
+};
 
 export default function AccountSettingsModal({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("email");
@@ -21,10 +27,49 @@ export default function AccountSettingsModal({ onClose }: { onClose: () => void 
   const [passwordMsg, setPasswordMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
 
+  // Notifications tab
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({
+    email_notify_messages: true,
+    email_notify_likes: true,
+    email_notify_comments: true,
+  });
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifMsg, setNotifMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   // Delete tab
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteMsg, setDeleteMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadPrefs() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("email_notify_messages, email_notify_likes, email_notify_comments")
+        .eq("id", user.id)
+        .single();
+      if (data) setNotifPrefs(data as NotifPrefs);
+    }
+    loadPrefs();
+  }, []);
+
+  async function handleNotifSave() {
+    setNotifLoading(true);
+    setNotifMsg(null);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from("profiles")
+      .update(notifPrefs)
+      .eq("id", user.id);
+    setNotifLoading(false);
+    if (error) setNotifMsg({ ok: false, text: "Failed to save preferences." });
+    else setNotifMsg({ ok: true, text: "Preferences saved." });
+  }
 
   async function handleEmailChange() {
     if (!newEmail.trim()) return;
@@ -84,6 +129,7 @@ export default function AccountSettingsModal({ onClose }: { onClose: () => void 
   const tabs: { id: Tab; label: string }[] = [
     { id: "email", label: "Email" },
     { id: "password", label: "Password" },
+    { id: "notifications", label: "Notifications" },
     { id: "danger", label: "Delete account" },
   ];
 
@@ -252,6 +298,62 @@ export default function AccountSettingsModal({ onClose }: { onClose: () => void 
                 }}
               >
                 {passwordLoading ? "Saving…" : "Update password"}
+              </button>
+            </div>
+          )}
+
+          {/* ── NOTIFICATIONS TAB ── */}
+          {tab === "notifications" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <p style={{ fontSize: "13px", color: "#a89690", margin: 0 }}>
+                Choose which email notifications you'd like to receive.
+              </p>
+
+              {([
+                { key: "email_notify_messages", label: "New messages", desc: "When someone sends you a direct message" },
+                { key: "email_notify_likes",    label: "Likes",        desc: "When someone likes your score" },
+                { key: "email_notify_comments", label: "Comments",     desc: "When someone comments on your score" },
+              ] as { key: keyof NotifPrefs; label: string; desc: string }[]).map(({ key, label, desc }) => (
+                <label key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", gap: "16px" }}>
+                  <div>
+                    <div style={{ fontSize: "14px", color: "#fff", marginBottom: "2px" }}>{label}</div>
+                    <div style={{ fontSize: "12px", color: "#6b5452" }}>{desc}</div>
+                  </div>
+                  <div
+                    onClick={() => setNotifPrefs(p => ({ ...p, [key]: !p[key] }))}
+                    style={{
+                      flexShrink: 0,
+                      width: "40px", height: "22px", borderRadius: "11px",
+                      background: notifPrefs[key] ? "#c0392b" : "rgba(255,255,255,0.1)",
+                      position: "relative", cursor: "pointer", transition: "background 0.2s",
+                    }}
+                  >
+                    <div style={{
+                      position: "absolute", top: "3px",
+                      left: notifPrefs[key] ? "21px" : "3px",
+                      width: "16px", height: "16px", borderRadius: "50%",
+                      background: "#fff", transition: "left 0.2s",
+                    }} />
+                  </div>
+                </label>
+              ))}
+
+              {notifMsg && (
+                <p style={{ fontSize: "12px", color: notifMsg.ok ? "#6fcf97" : "#e87060", margin: 0 }}>
+                  {notifMsg.text}
+                </p>
+              )}
+              <button
+                onClick={handleNotifSave}
+                disabled={notifLoading}
+                style={{
+                  padding: "10px 20px", borderRadius: "8px",
+                  background: "#c0392b", color: "#fff",
+                  fontSize: "13px", fontWeight: 600, border: "none", cursor: "pointer",
+                  opacity: notifLoading ? 0.5 : 1, alignSelf: "flex-start",
+                }}
+              >
+                {notifLoading ? "Saving…" : "Save preferences"}
               </button>
             </div>
           )}

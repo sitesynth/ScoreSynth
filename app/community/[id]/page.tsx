@@ -256,7 +256,7 @@ export default function ScoreDetailPage() {
     const { data } = await supabase
       .from("comments")
       .insert({ score_id: score.id, author_id: user.id, text: commentText.trim() })
-      .select("*, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
+      .select("*, profiles!comments_author_id_fkey(handle, display_name, avatar_url)")
       .single();
     if (data) setComments(prev => [data as Comment, ...prev]);
     setCommentText("");

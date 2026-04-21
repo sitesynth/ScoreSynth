@@ -250,6 +250,12 @@ export default function ScoreDetailPage() {
     }
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    const supabase = createClient();
+    const { error } = await supabase.from("comments").delete().eq("id", commentId).eq("author_id", user!.id);
+    if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
+  };
+
   const handleComment = async () => {
     if (!commentText.trim() || !user || !score) return;
     const supabase = createClient();
@@ -430,6 +436,19 @@ export default function ScoreDetailPage() {
                           <div style={{ display: "flex", gap: "8px", alignItems: "baseline", marginBottom: "4px" }}>
                             <span style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8" }}>{name}</span>
                             <span style={{ fontSize: "11px", color: "#6b5452" }}>{time}</span>
+                            {user?.id === c.author_id && (
+                              <button
+                                onClick={() => handleDeleteComment(c.id)}
+                                title="Delete comment"
+                                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#6b5452", padding: "0 2px", lineHeight: 1, display: "flex" }}
+                                onMouseEnter={e => (e.currentTarget.style.color = "#e87060")}
+                                onMouseLeave={e => (e.currentTarget.style.color = "#6b5452")}
+                              >
+                                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </button>
+                            )}
                           </div>
                           <p style={{ fontSize: "13px", color: "#a89690", lineHeight: 1.5 }}>{c.text}</p>
                         </div>

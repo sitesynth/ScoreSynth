@@ -67,6 +67,9 @@ function MessagesInner() {
   const [searching, setSearching] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const [isMobile, setIsMobile] = useState(false);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const supabaseRef = useRef(createClient());
@@ -75,6 +78,14 @@ function MessagesInner() {
   useEffect(() => {
     if (!authLoading && !user) router.replace("/community");
   }, [authLoading, user, router]);
+
+  // Mobile detection
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // User search for compose
   useEffect(() => {
@@ -216,6 +227,7 @@ function MessagesInner() {
     setActiveOther(conv.other);
     loadMessages(conv.id);
     subscribeToConv(conv.id);
+    setMobileView("chat");
   }
 
   async function loadMessages(convId: string) {
@@ -306,9 +318,11 @@ function MessagesInner() {
         }}>
           {/* ── Left sidebar ── */}
           <div style={{
-            width: "280px", flexShrink: 0,
-            borderRight: "1px solid rgba(255,255,255,0.07)",
-            display: "flex", flexDirection: "column",
+            width: isMobile ? "100%" : "280px",
+            flexShrink: 0,
+            borderRight: isMobile ? "none" : "1px solid rgba(255,255,255,0.07)",
+            display: isMobile && mobileView === "chat" ? "none" : "flex",
+            flexDirection: "column",
             overflowY: "auto",
           }}>
             <div style={{ padding: "16px 16px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
@@ -435,7 +449,10 @@ function MessagesInner() {
           </div>
 
           {/* ── Right chat pane ── */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{
+            flex: 1, display: isMobile && mobileView === "list" ? "none" : "flex",
+            flexDirection: "column", overflow: "hidden",
+          }}>
             {!activeConvId ? (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <div style={{ textAlign: "center" }}>
@@ -452,6 +469,21 @@ function MessagesInner() {
                   padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)",
                   display: "flex", alignItems: "center", gap: "12px", flexShrink: 0,
                 }}>
+                  {/* Back button — mobile only */}
+                  {isMobile && (
+                    <button
+                      onClick={() => setMobileView("list")}
+                      style={{
+                        background: "none", border: "none", color: "#a89690",
+                        cursor: "pointer", padding: "4px", display: "flex",
+                        alignItems: "center", flexShrink: 0,
+                      }}
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M19 12H5M12 5l-7 7 7 7"/>
+                      </svg>
+                    </button>
+                  )}
                   {activeOther && (
                     <>
                       <Avatar user={activeOther} size={36} />

@@ -250,9 +250,16 @@ export default function ScoreDetailPage() {
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
+  const handleDeleteComment = async (commentId: string, commentAuthorId: string) => {
     const supabase = createClient();
-    const { error } = await supabase.from("comments").delete().eq("id", commentId).eq("author_id", user!.id);
+    const isCommentAuthor = user?.id === commentAuthorId;
+    const isScoreAuthor = user?.id === score?.author_id;
+    if (!isCommentAuthor && !isScoreAuthor) return;
+    const query = supabase.from("comments").delete().eq("id", commentId);
+    // comment author deletes own; score author can delete any comment on their score
+    const { error } = isCommentAuthor
+      ? await query.eq("author_id", user!.id)
+      : await query;
     if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
   };
 
@@ -436,9 +443,9 @@ export default function ScoreDetailPage() {
                           <div style={{ display: "flex", gap: "8px", alignItems: "baseline", marginBottom: "4px" }}>
                             <span style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8" }}>{name}</span>
                             <span style={{ fontSize: "11px", color: "#6b5452" }}>{time}</span>
-                            {user?.id === c.author_id && (
+                            {(user?.id === c.author_id || user?.id === score?.author_id) && (
                               <button
-                                onClick={() => handleDeleteComment(c.id)}
+                                onClick={() => handleDeleteComment(c.id, c.author_id)}
                                 style={{ marginLeft: "4px", background: "none", border: "none", cursor: "pointer", color: "#6b5452", padding: 0, fontSize: "11px" }}
                                 onMouseEnter={e => (e.currentTarget.style.color = "#e87060")}
                                 onMouseLeave={e => (e.currentTarget.style.color = "#6b5452")}

@@ -20,7 +20,7 @@ type NotificationRecord = {
   created_at: string;
 };
 
-function buildEmailHtml(n: NotificationRecord): string {
+function buildEmailHtml(n: NotificationRecord, actorAvatarUrl?: string | null): string {
   const typeConfig: Record<string, { label: string; icon: string; ctaText: string; ctaUrl: string }> = {
     message: {
       label: "New Message",
@@ -49,6 +49,10 @@ function buildEmailHtml(n: NotificationRecord): string {
     icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   };
 
+  const avatarBlock = actorAvatarUrl
+    ? `<img src="${actorAvatarUrl}" width="64" height="64" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 16px;"/>`
+    : `<div style="display:inline-block;background:rgba(192,57,43,0.12);border-radius:50%;width:64px;height:64px;line-height:64px;text-align:center;margin-bottom:16px;">${config.icon}</div>`;
+
   const actorLine = n.actor_handle
     ? `<p style="margin:0 0 6px;font-size:13px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;">@${n.actor_handle}</p>`
     : "";
@@ -76,9 +80,7 @@ function buildEmailHtml(n: NotificationRecord): string {
         <!-- ICON HEADER -->
         <tr>
           <td style="background:#1d1413;border-radius:16px 16px 0 0;padding:36px 44px 28px;text-align:center;border:1px solid rgba(255,255,255,0.07);border-bottom:none;">
-            <div style="display:inline-block;background:rgba(192,57,43,0.12);border-radius:50%;width:64px;height:64px;line-height:64px;text-align:center;margin-bottom:20px;">
-              ${config.icon}
-            </div>
+            ${avatarBlock}
             ${actorLine}
             <p style="margin:0 0 4px;font-size:12px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;">${config.label}</p>
           </td>
@@ -95,7 +97,7 @@ function buildEmailHtml(n: NotificationRecord): string {
               <tr>
                 <td style="background:#c0392b;border-radius:12px;">
                   <a href="${config.ctaUrl}" style="display:inline-block;padding:14px 40px;font-family:Arial,sans-serif;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.5px;">
-                    ${config.ctaText} &rarr;
+                    ${config.ctaText}
                   </a>
                 </td>
               </tr>
@@ -179,11 +181,22 @@ export async function POST(req: NextRequest) {
 
   const userEmail = userData.user.email;
 
+  // Fetch actor avatar if available
+  let actorAvatarUrl: string | null = null;
+  if (record.actor_handle) {
+    const { data: actorProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("avatar_url")
+      .eq("handle", record.actor_handle)
+      .single<{ avatar_url: string | null }>();
+    actorAvatarUrl = actorProfile?.avatar_url ?? null;
+  }
+
   const { error: sendError } = await resend.emails.send({
     from: "ScoreSynth <noreply@scoresynth.com>",
     to: userEmail,
     subject: record.title,
-    html: buildEmailHtml(record),
+    html: buildEmailHtml(record, actorAvatarUrl),
   });
 
   if (sendError) {

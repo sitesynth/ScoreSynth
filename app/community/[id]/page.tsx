@@ -210,7 +210,7 @@ export default function ScoreDetailPage() {
       // Fetch comments
       const { data: commentData } = await supabase
         .from("comments")
-        .select("*, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
+        .select("*, profiles!comments_author_id_fkey(handle, display_name, avatar_url)")
         .eq("score_id", id)
         .order("created_at", { ascending: false });
 

@@ -251,15 +251,19 @@ export default function ScoreDetailPage() {
   };
 
   const handleDeleteComment = async (commentId: string, commentAuthorId: string) => {
-    const supabase = createClient();
+    const confirmed = window.confirm("Are you sure you want to delete this comment?");
+    if (!confirmed) return;
+
     const isCommentAuthor = user?.id === commentAuthorId;
     const isScoreAuthor = user?.id === score?.author_id;
     if (!isCommentAuthor && !isScoreAuthor) return;
-    const query = supabase.from("comments").delete().eq("id", commentId);
-    // comment author deletes own; score author can delete any comment on their score
-    const { error } = isCommentAuthor
-      ? await query.eq("author_id", user!.id)
-      : await query;
+
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("comments")
+      .delete()
+      .eq("id", commentId);
+
     if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
   };
 

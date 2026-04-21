@@ -154,21 +154,18 @@ export async function POST(req: NextRequest) {
   }
 
   // Check user notification preferences
-  const prefKey: Record<string, string> = {
-    message: "email_notify_messages",
-    like:    "email_notify_likes",
-    comment: "email_notify_comments",
-  };
-  const col = prefKey[record.type];
-  if (col) {
-    const { data: prefs } = await supabaseAdmin
-      .from("profiles")
-      .select(col)
-      .eq("id", record.user_id)
-      .single();
-    if (prefs && (prefs as Record<string, unknown>)[col] === false) {
-      return NextResponse.json({ ok: true, skipped: "user opted out" });
-    }
+  const { data: prefs } = await supabaseAdmin
+    .from("profiles")
+    .select("email_notify_messages, email_notify_likes, email_notify_comments")
+    .eq("id", record.user_id)
+    .single<{ email_notify_messages: boolean; email_notify_likes: boolean; email_notify_comments: boolean }>();
+
+  if (prefs) {
+    const opted_out =
+      (record.type === "message" && prefs.email_notify_messages === false) ||
+      (record.type === "like"    && prefs.email_notify_likes    === false) ||
+      (record.type === "comment" && prefs.email_notify_comments === false);
+    if (opted_out) return NextResponse.json({ ok: true, skipped: "user opted out" });
   }
 
   // Get user email via admin API

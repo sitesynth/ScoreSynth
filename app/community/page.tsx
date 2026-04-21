@@ -27,7 +27,7 @@ export default function CommunityPage() {
     const supabase = createClient();
     supabase
       .from("scores")
-      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
+      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, parts, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
       .order("likes_count", { ascending: false })
       .then(({ data }) => {
         setAllScores((data as unknown as Score[]) ?? []);

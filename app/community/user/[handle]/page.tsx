@@ -438,10 +438,10 @@ export default function PublicUserProfilePage() {
 
       const [scoresRes, savedRes, fCountRes, fgCountRes] = await Promise.all([
         supabase.from("scores")
-          .select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at, cover_url, resource_collection_id")
+          .select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, parts, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at, cover_url, resource_collection_id")
           .eq("author_id", p.id).order("likes_count", { ascending: false }),
         supabase.from("saved_scores")
-          .select("collection_id, scores(id, title, composer, tag, price_display, likes_count, views_count, category, cover_url, author_id, pdf_url, midi_url, instruments, pages, publisher, description, difficulty, created_at, updated_at)")
+          .select("collection_id, scores(id, title, composer, tag, price_display, likes_count, views_count, category, cover_url, author_id, pdf_url, midi_url, instruments, parts, pages, publisher, description, difficulty, created_at, updated_at)")
           .eq("user_id", p.id).order("saved_at", { ascending: false }),
         supabase.from("follows").select("*", { count: "exact", head: true }).eq("followee_id", p.id),
         supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", p.id),
@@ -1530,7 +1530,7 @@ export default function PublicUserProfilePage() {
             if (!handle || !profileUser) return;
             const supabase = createClient();
             supabase.from("scores")
-              .select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at, cover_url, resource_collection_id")
+              .select("id, title, composer, tag, price_display, likes_count, views_count, category, instruments, parts, pages, publisher, description, difficulty, author_id, midi_url, pdf_url, created_at, updated_at, cover_url, resource_collection_id")
               .eq("author_id", profileUser.id).order("likes_count", { ascending: false })
               .then(({ data }) => {
                 const scores = (data as Score[]) ?? [];

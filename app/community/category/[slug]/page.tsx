@@ -47,7 +47,7 @@ export default function CategoryPage() {
     const supabase = createClient();
     supabase
       .from("scores")
-      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, pages, publisher, description, difficulty, midi_url, pdf_url, created_at, updated_at, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
+      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, parts, pages, publisher, description, difficulty, midi_url, pdf_url, created_at, updated_at, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
       .eq("category", slug)
       .order("likes_count", { ascending: false })
       .then(({ data }) => {

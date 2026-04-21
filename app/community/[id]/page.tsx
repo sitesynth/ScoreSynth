@@ -439,14 +439,11 @@ export default function ScoreDetailPage() {
                             {user?.id === c.author_id && (
                               <button
                                 onClick={() => handleDeleteComment(c.id)}
-                                title="Delete comment"
-                                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#6b5452", padding: "0 2px", lineHeight: 1, display: "flex" }}
+                                style={{ marginLeft: "4px", background: "none", border: "none", cursor: "pointer", color: "#6b5452", padding: 0, fontSize: "11px" }}
                                 onMouseEnter={e => (e.currentTarget.style.color = "#e87060")}
                                 onMouseLeave={e => (e.currentTarget.style.color = "#6b5452")}
                               >
-                                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
+                                delete
                               </button>
                             )}
                           </div>

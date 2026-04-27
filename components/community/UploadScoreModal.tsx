@@ -528,15 +528,16 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
                     }}
                   >
                     {/* Drag handle */}
-                    <svg
+                    <span
                       draggable
                       onDragStart={e => { e.stopPropagation(); setReorderDrag({ fromIdx: i }); }}
-                      width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24"
-                      style={{ flexShrink: 0, cursor: "grab" }}
+                      style={{ display: "inline-flex", flexShrink: 0, cursor: "grab" }}
                     >
-                      <line x1="3" y1="8"  x2="21" y2="8"/>
-                      <line x1="3" y1="16" x2="21" y2="16"/>
-                    </svg>
+                      <svg width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24">
+                        <line x1="3" y1="8"  x2="21" y2="8"/>
+                        <line x1="3" y1="16" x2="21" y2="16"/>
+                      </svg>
+                    </span>
                     <input
                       type="text"
                       placeholder="Name, e.g. Violin I"

@@ -72,6 +72,9 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
   const [pdfDrag,     setPdfDrag]     = useState(false);
   const [audioDrag,   setAudioDrag]   = useState(false);
   const [newPartDragIndex, setNewPartDragIndex] = useState<number | null>(null);
+  // Reorder drag state (separate from file-drop drag)
+  const [reorderDrag,    setReorderDrag]    = useState<{ list: "existing" | "new"; fromIdx: number } | null>(null);
+  const [reorderOverIdx, setReorderOverIdx] = useState<number | null>(null);
 
   const isPdfFile = (f: File) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
 
@@ -94,6 +97,21 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
   const updateNewPartName = (i: number, name: string) => setNewParts(p => p.map((pt, idx) => idx === i ? { ...pt, name } : pt));
   const updateNewPartFile = (i: number, file: File | null) => setNewParts(p => p.map((pt, idx) => idx === i ? { ...pt, file } : pt));
   const removeExistingPart = (i: number) => setExistingParts(p => p.filter((_, idx) => idx !== i));
+
+  const reorder = <T,>(arr: T[], from: number, to: number): T[] => {
+    const next = [...arr];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    return next;
+  };
+
+  const handleReorderDrop = (list: "existing" | "new", toIdx: number) => {
+    if (!reorderDrag || reorderDrag.list !== list || reorderDrag.fromIdx === toIdx) return;
+    if (list === "existing") setExistingParts(p => reorder(p, reorderDrag.fromIdx, toIdx));
+    else setNewParts(p => reorder(p, reorderDrag.fromIdx, toIdx));
+    setReorderDrag(null);
+    setReorderOverIdx(null);
+  };
 
   const handleSave = async () => {
     if (!title.trim()) { setError("Title is required."); return; }
@@ -427,11 +445,29 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
           {existingParts.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "8px" }}>
               {existingParts.map((part, i) => (
-                <div key={i} style={{
-                  display: "flex", alignItems: "center", gap: "8px",
-                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: "10px", padding: "8px 10px",
-                }}>
+                <div
+                  key={i}
+                  draggable
+                  onDragStart={() => setReorderDrag({ list: "existing", fromIdx: i })}
+                  onDragOver={e => { e.preventDefault(); setReorderOverIdx(i); }}
+                  onDragLeave={() => setReorderOverIdx(null)}
+                  onDrop={() => handleReorderDrop("existing", i)}
+                  onDragEnd={() => { setReorderDrag(null); setReorderOverIdx(null); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "8px",
+                    background: reorderDrag?.list === "existing" && reorderOverIdx === i
+                      ? "rgba(192,57,43,0.08)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${reorderDrag?.list === "existing" && reorderOverIdx === i
+                      ? "rgba(192,57,43,0.35)" : "rgba(255,255,255,0.07)"}`,
+                    borderRadius: "10px", padding: "8px 10px",
+                    cursor: "grab", transition: "background 0.12s, border-color 0.12s",
+                  }}
+                >
+                  {/* Drag handle */}
+                  <svg width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, cursor: "grab" }}>
+                    <line x1="3" y1="8"  x2="21" y2="8"/>
+                    <line x1="3" y1="16" x2="21" y2="16"/>
+                  </svg>
                   <svg width="12" height="12" fill="none" stroke="#6b5452" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
                     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
                   </svg>
@@ -459,12 +495,30 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
           {newParts.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "8px" }}>
               {newParts.map((part, i) => (
-                <div key={i} style={{
-                  display: "grid", gridTemplateColumns: "1fr 1fr auto",
-                  gap: "8px", alignItems: "center",
-                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(192,57,43,0.2)",
-                  borderRadius: "10px", padding: "8px 10px",
-                }}>
+                <div
+                  key={i}
+                  draggable
+                  onDragStart={e => { if ((e.target as HTMLElement).closest("label")) { e.preventDefault(); return; } setReorderDrag({ list: "new", fromIdx: i }); }}
+                  onDragOver={e => { if (reorderDrag?.list === "new") { e.preventDefault(); setReorderOverIdx(i); } }}
+                  onDragLeave={() => { if (reorderDrag?.list === "new") setReorderOverIdx(null); }}
+                  onDrop={e => { if (reorderDrag?.list === "new") { e.stopPropagation(); handleReorderDrop("new", i); } }}
+                  onDragEnd={() => { setReorderDrag(null); setReorderOverIdx(null); }}
+                  style={{
+                    display: "grid", gridTemplateColumns: "auto 1fr 1fr auto",
+                    gap: "8px", alignItems: "center",
+                    background: reorderDrag?.list === "new" && reorderOverIdx === i
+                      ? "rgba(192,57,43,0.08)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${reorderDrag?.list === "new" && reorderOverIdx === i
+                      ? "rgba(192,57,43,0.35)" : "rgba(192,57,43,0.2)"}`,
+                    borderRadius: "10px", padding: "8px 10px",
+                    transition: "background 0.12s, border-color 0.12s",
+                  }}
+                >
+                  {/* Drag handle */}
+                  <svg width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, cursor: "grab" }}>
+                    <line x1="3" y1="8"  x2="21" y2="8"/>
+                    <line x1="3" y1="16" x2="21" y2="16"/>
+                  </svg>
                   <input
                     type="text"
                     placeholder="Name, e.g. Violin I"
@@ -475,16 +529,19 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
                   <label
                     onDragOver={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
                       setNewPartDragIndex(i);
                     }}
                     onDragLeave={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
                       if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
                         setNewPartDragIndex(prev => (prev === i ? null : prev));
                       }
                     }}
                     onDrop={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
                       setNewPartDragIndex(null);
                       const file = e.dataTransfer.files[0];
                       if (file && isPdfFile(file)) {

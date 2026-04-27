@@ -211,8 +211,8 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       style={{
         position: "fixed", inset: 0, zIndex: 100,
         background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)",
-        display: "flex", alignItems: "flex-start", justifyContent: "center",
-        padding: "24px", overflowY: "auto",
+        overflowY: "auto",
+        padding: "24px",
       }}
     >
       <div
@@ -221,7 +221,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
           border: "1px solid rgba(255,255,255,0.1)",
           padding: "32px", width: "100%", maxWidth: "480px",
           display: "flex", flexDirection: "column", gap: "12px",
-          margin: "auto 0",
+          margin: "0 auto",
         }}
       >
         {/* Header */}

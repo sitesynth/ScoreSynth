@@ -523,11 +523,9 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
               {existingParts.map((part, i) => (
                 <div
                   key={i}
-                  draggable
-                  onDragStart={() => setReorderDrag({ list: "existing", fromIdx: i })}
                   onDragOver={e => { e.preventDefault(); setReorderOverIdx(i); }}
-                  onDragLeave={() => setReorderOverIdx(null)}
-                  onDrop={() => handleReorderDrop("existing", i)}
+                  onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setReorderOverIdx(null); }}
+                  onDrop={e => { e.preventDefault(); handleReorderDrop("existing", i); }}
                   onDragEnd={() => { setReorderDrag(null); setReorderOverIdx(null); }}
                   style={{
                     display: "flex", alignItems: "center", gap: "8px",
@@ -540,7 +538,12 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
                   }}
                 >
                   {/* Drag handle */}
-                  <svg width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, cursor: "grab" }}>
+                  <svg
+                    draggable
+                    onDragStart={e => { e.stopPropagation(); setReorderDrag({ list: "existing", fromIdx: i }); }}
+                    width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24"
+                    style={{ flexShrink: 0, cursor: "grab" }}
+                  >
                     <line x1="3" y1="8"  x2="21" y2="8"/>
                     <line x1="3" y1="16" x2="21" y2="16"/>
                   </svg>
@@ -573,11 +576,9 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
               {newParts.map((part, i) => (
                 <div
                   key={i}
-                  draggable
-                  onDragStart={e => { if ((e.target as HTMLElement).closest("label")) { e.preventDefault(); return; } setReorderDrag({ list: "new", fromIdx: i }); }}
-                  onDragOver={e => { if (reorderDrag?.list === "new") { e.preventDefault(); setReorderOverIdx(i); } }}
-                  onDragLeave={() => { if (reorderDrag?.list === "new") setReorderOverIdx(null); }}
-                  onDrop={e => { if (reorderDrag?.list === "new") { e.stopPropagation(); handleReorderDrop("new", i); } }}
+                  onDragOver={e => { e.preventDefault(); setReorderOverIdx(i); }}
+                  onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setReorderOverIdx(null); }}
+                  onDrop={e => { e.preventDefault(); if (reorderDrag?.list === "new") { handleReorderDrop("new", i); } }}
                   onDragEnd={() => { setReorderDrag(null); setReorderOverIdx(null); }}
                   style={{
                     display: "grid", gridTemplateColumns: "auto 1fr 1fr auto",
@@ -591,7 +592,12 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
                   }}
                 >
                   {/* Drag handle */}
-                  <svg width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, cursor: "grab" }}>
+                  <svg
+                    draggable
+                    onDragStart={e => { e.stopPropagation(); setReorderDrag({ list: "new", fromIdx: i }); }}
+                    width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24"
+                    style={{ flexShrink: 0, cursor: "grab" }}
+                  >
                     <line x1="3" y1="8"  x2="21" y2="8"/>
                     <line x1="3" y1="16" x2="21" y2="16"/>
                   </svg>

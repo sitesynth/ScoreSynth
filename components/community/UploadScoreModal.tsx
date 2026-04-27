@@ -514,11 +514,9 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
                 {parts.map((part, i) => (
                   <div
                     key={i}
-                    draggable
-                    onDragStart={e => { if ((e.target as HTMLElement).closest("label")) { e.preventDefault(); return; } setReorderDrag({ fromIdx: i }); }}
-                    onDragOver={e => { if (reorderDrag) { e.preventDefault(); setReorderOverIdx(i); } }}
-                    onDragLeave={() => { if (reorderDrag) setReorderOverIdx(null); }}
-                    onDrop={e => { if (reorderDrag) { e.stopPropagation(); reorderParts(reorderDrag.fromIdx, i); setReorderDrag(null); setReorderOverIdx(null); } }}
+                    onDragOver={e => { e.preventDefault(); setReorderOverIdx(i); }}
+                    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setReorderOverIdx(null); }}
+                    onDrop={e => { e.preventDefault(); if (reorderDrag !== null) { reorderParts(reorderDrag.fromIdx, i); setReorderDrag(null); setReorderOverIdx(null); } }}
                     onDragEnd={() => { setReorderDrag(null); setReorderOverIdx(null); }}
                     style={{
                       display: "grid", gridTemplateColumns: "auto 1fr 1fr auto",
@@ -530,7 +528,12 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
                     }}
                   >
                     {/* Drag handle */}
-                    <svg width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, cursor: "grab" }}>
+                    <svg
+                      draggable
+                      onDragStart={e => { e.stopPropagation(); setReorderDrag({ fromIdx: i }); }}
+                      width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24"
+                      style={{ flexShrink: 0, cursor: "grab" }}
+                    >
                       <line x1="3" y1="8"  x2="21" y2="8"/>
                       <line x1="3" y1="16" x2="21" y2="16"/>
                     </svg>

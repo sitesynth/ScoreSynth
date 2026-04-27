@@ -12,6 +12,7 @@ import EditScoreModal from "@/components/community/EditScoreModal";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
 import type { Score, Comment } from "@/lib/supabase/types";
+import { stampPdfForDownload } from "@/lib/pdf-processor";
 
 // ─── Audio Player ─────────────────────────────────────────────────────────────
 function AudioPlayer({ src, title }: { src: string; title: string }) {
@@ -160,6 +161,36 @@ export default function ScoreDetailPage() {
   const { user } = useAuth();
   const isLoggedIn = !!user;
 
+  // Download a score PDF from Supabase, stamp it with ScoreSynth branding, and trigger save
+  const downloadStampedPdf = async (storagePath: string, filename: string) => {
+    const supabase = createClient();
+
+    // Fetch downloader handle from profiles table (most accurate source)
+    let downloaderHandle = user?.email?.split("@")[0] ?? "user";
+    if (user?.id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("handle")
+        .eq("id", user.id)
+        .single();
+      if (profile?.handle) downloaderHandle = profile.handle;
+    }
+
+    const uploaderHandle = score?.profiles?.handle ?? "author";
+
+    const { data } = await supabase.storage.from("score-files").createSignedUrl(storagePath, 3600);
+    if (!data?.signedUrl) return;
+    const response = await fetch(data.signedUrl);
+    const buffer   = await response.arrayBuffer();
+    const stamped  = await stampPdfForDownload(buffer, { downloaderHandle, uploaderHandle });
+    const url = URL.createObjectURL(stamped);
+    const a   = document.createElement("a");
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Set to true to enable comments when the main app is ready
   const COMMENTS_ENABLED = true;
 
@@ -173,6 +204,7 @@ export default function ScoreDetailPage() {
   const [loadingScore, setLoadingScore] = useState(true);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ commentId: string; authorId: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   useEffect(() => {
@@ -250,21 +282,20 @@ export default function ScoreDetailPage() {
     }
   };
 
-  const handleDeleteComment = async (commentId: string, commentAuthorId: string) => {
-    const confirmed = window.confirm("Are you sure you want to delete this comment?");
-    if (!confirmed) return;
+  const handleDeleteComment = (commentId: string, commentAuthorId: string) => {
+    setConfirmDelete({ commentId, authorId: commentAuthorId });
+  };
 
-    const isCommentAuthor = user?.id === commentAuthorId;
+  const confirmDeleteComment = async () => {
+    if (!confirmDelete) return;
+    const { commentId, authorId } = confirmDelete;
+    const isCommentAuthor = user?.id === authorId;
     const isScoreAuthor = user?.id === score?.author_id;
     if (!isCommentAuthor && !isScoreAuthor) return;
-
     const supabase = createClient();
-    const { error } = await supabase
-      .from("comments")
-      .delete()
-      .eq("id", commentId);
-
+    const { error } = await supabase.from("comments").delete().eq("id", commentId);
     if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
+    setConfirmDelete(null);
   };
 
   const handleComment = async () => {
@@ -633,9 +664,7 @@ export default function ScoreDetailPage() {
                     onClick={async () => {
                       if (!isLoggedIn) { setAuthIntent("download"); setShowAuthModal(true); return; }
                       if (!score.pdf_url) return;
-                      const supabase = createClient();
-                      const { data } = await supabase.storage.from("score-files").createSignedUrl(score.pdf_url, 3600);
-                      if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                      await downloadStampedPdf(score.pdf_url, `${score.title}.pdf`);
                     }}
                     style={{
                       width: "100%", padding: "11px", borderRadius: "10px",
@@ -675,14 +704,8 @@ export default function ScoreDetailPage() {
                             if (!isLoggedIn) { setAuthIntent("download"); setShowAuthModal(true); return; }
                             const supabase = createClient();
                             for (const part of score.parts) {
-                              const { data } = await supabase.storage.from("score-files").createSignedUrl(part.pdf_url, 3600);
-                              if (data?.signedUrl) {
-                                const a = document.createElement("a");
-                                a.href = data.signedUrl;
-                                a.download = `${part.name}.pdf`;
-                                a.click();
-                                await new Promise(r => setTimeout(r, 400));
-                              }
+                              await downloadStampedPdf(part.pdf_url, `${part.name}.pdf`);
+                              await new Promise(r => setTimeout(r, 400));
                             }
                           }}
                           style={{
@@ -709,13 +732,7 @@ export default function ScoreDetailPage() {
                               onClick={async () => {
                                 if (!isLoggedIn) { setAuthIntent("download"); setShowAuthModal(true); return; }
                                 const supabase = createClient();
-                                const { data } = await supabase.storage.from("score-files").createSignedUrl(part.pdf_url, 3600);
-                                if (data?.signedUrl) {
-                                  const a = document.createElement("a");
-                                  a.href = data.signedUrl;
-                                  a.download = `${part.name}.pdf`;
-                                  a.click();
-                                }
+                                await downloadStampedPdf(part.pdf_url, `${part.name}.pdf`);
                               }}
                               style={{
                                 flexShrink: 0, fontSize: "11px", padding: "3px 9px", borderRadius: "5px",
@@ -790,6 +807,51 @@ export default function ScoreDetailPage() {
           onClose={() => setShowEditModal(false)}
           onSuccess={(updated) => { setScore(updated); setShowEditModal(false); }}
         />
+      )}
+
+      {confirmDelete && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }} onClick={() => setConfirmDelete(null)}>
+          <div style={{
+            background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "12px", padding: "28px 32px", maxWidth: "360px", width: "90%",
+            display: "flex", flexDirection: "column", gap: "20px",
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <span style={{ fontSize: "16px", fontWeight: 600, color: "#e8dbd8" }}>
+                Delete comment?
+              </span>
+              <span style={{ fontSize: "13px", color: "#a89690", lineHeight: 1.5 }}>
+                This action cannot be undone.
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                style={{
+                  padding: "8px 18px", borderRadius: "8px", fontSize: "13px",
+                  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)",
+                  color: "#a89690", cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteComment}
+                style={{
+                  padding: "8px 18px", borderRadius: "8px", fontSize: "13px",
+                  background: "#c0392b", border: "none",
+                  color: "#fff", cursor: "pointer", fontWeight: 500,
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

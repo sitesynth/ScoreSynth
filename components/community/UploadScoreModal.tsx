@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/supabase/useAuth";
+import { processPdfForUpload } from "@/lib/pdf-processor";
 
 async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   try {
@@ -151,9 +152,12 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
 
     const supabase = createClient();
 
+    // Process PDF: strip original metadata, embed ScoreSynth branding pages
+    const processedPdf = await processPdfForUpload(pdfFile, title.trim());
+
     // Upload main PDF
     const pdfPath = `${user.id}/${Date.now()}-${pdfFile.name}`;
-    const { error: uploadError } = await supabase.storage.from("score-files").upload(pdfPath, pdfFile);
+    const { error: uploadError } = await supabase.storage.from("score-files").upload(pdfPath, processedPdf);
     if (uploadError) {
       setError(`Upload failed: ${uploadError.message}`);
       setUploading(false);
@@ -186,8 +190,9 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
     const uploadedParts: { name: string; pdf_url: string }[] = [];
     for (const part of parts) {
       if (!part.name.trim() || !part.file) continue;
+      const processedPart = await processPdfForUpload(part.file, `${title.trim()} — ${part.name.trim()}`);
       const partPath = `${user.id}/parts/${Date.now()}-${part.file.name}`;
-      const { error: partErr } = await supabase.storage.from("score-files").upload(partPath, part.file);
+      const { error: partErr } = await supabase.storage.from("score-files").upload(partPath, processedPart);
       if (!partErr) uploadedParts.push({ name: part.name.trim(), pdf_url: partPath });
     }
 

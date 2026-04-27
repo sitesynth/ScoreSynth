@@ -28,6 +28,12 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   }
 }
 
+// Strips non-ASCII / spaces from filename so Supabase Storage accepts the key
+const safeStorageName = (file: File) => {
+  const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "bin";
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+};
+
 const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "guitar", "percussion", "choir", "chamber", "symphonic", "jazz", "soundtracks"];
 const CATEGORY_LABELS: Record<string, string> = {
   piano:       "Piano & Keyboard",
@@ -169,7 +175,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
     const processedPdf = await processPdfForUpload(pdfFile, title.trim());
 
     // Upload main PDF
-    const pdfPath = `${user.id}/${Date.now()}-${pdfFile.name}`;
+    const pdfPath = `${user.id}/${safeStorageName(pdfFile)}`;
     const { error: uploadError } = await supabase.storage.from("score-files").upload(pdfPath, processedPdf);
     if (uploadError) {
       setError(`Upload failed: ${uploadError.message}`);
@@ -204,7 +210,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
     for (const part of parts) {
       if (!part.name.trim() || !part.file) continue;
       const processedPart = await processPdfForUpload(part.file, `${title.trim()} — ${part.name.trim()}`);
-      const partPath = `${user.id}/parts/${Date.now()}-${part.file.name}`;
+      const partPath = `${user.id}/parts/${safeStorageName(part.file)}`;
       const { error: partErr } = await supabase.storage.from("score-files").upload(partPath, processedPart);
       if (!partErr) uploadedParts.push({ name: part.name.trim(), pdf_url: partPath });
     }

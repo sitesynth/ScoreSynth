@@ -27,6 +27,12 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   }
 }
 
+// Strips non-ASCII / spaces from filename so Supabase Storage accepts the key
+const safeStorageName = (file: File) => {
+  const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "bin";
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+};
+
 const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "guitar", "percussion", "choir", "chamber", "symphonic", "jazz", "soundtracks"];
 const CATEGORY_LABELS: Record<string, string> = {
   piano:       "Piano & Keyboard",
@@ -141,7 +147,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
     // Upload new PDF if provided
     if (pdfFile) {
       const processedPdf = await processPdfForUpload(pdfFile, title.trim());
-      const pdfPath = `${user.id}/${Date.now()}-${pdfFile.name}`;
+      const pdfPath = `${user.id}/${safeStorageName(pdfFile)}`;
       const { error: pdfErr } = await supabase.storage
         .from("score-files")
         .upload(pdfPath, processedPdf);
@@ -178,8 +184,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
     for (const part of newParts) {
       if (!part.name.trim() || !part.file) continue;
       const processedPart = await processPdfForUpload(part.file, `${title.trim()} — ${part.name.trim()}`);
-      const ext = part.file.name.split(".").pop()?.toLowerCase() ?? "pdf";
-      const partPath = `${user.id}/parts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const partPath = `${user.id}/parts/${safeStorageName(part.file)}`;
       const { error: partErr } = await supabase.storage.from("score-files").upload(partPath, processedPart);
       if (partErr) { setError(`Part upload failed: ${partErr.message}`); setSaving(false); return; }
       uploadedNewParts.push({ name: part.name.trim(), pdf_url: partPath });

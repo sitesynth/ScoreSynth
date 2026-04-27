@@ -36,7 +36,7 @@ export default function CommunityPage() {
     const supabase = createClient();
     supabase
       .from("scores")
-      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, parts, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
+      .select("id, title, composer, tag, price_display, likes_count, views_count, category, author_id, cover_url, instruments, parts, created_at, profiles!scores_author_id_fkey(handle, display_name, avatar_url)")
       .order("likes_count", { ascending: false })
       .then(({ data }) => {
         setAllScores((data as unknown as Score[]) ?? []);
@@ -85,7 +85,7 @@ export default function CommunityPage() {
   }, [allScores, query]);
 
   // Homepage sections (no search active)
-  const pianoScores = useMemo(() => allScores.filter(s => s.category === "piano"), [allScores]);
+  const newScores   = useMemo(() => [...allScores].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6), [allScores]);
   const brassScores = useMemo(() => allScores.filter(s => s.category === "brass"), [allScores]);
 
   const handleTagClick = (tag: string) => {
@@ -234,17 +234,19 @@ export default function CommunityPage() {
           ) : (
             /* ── HOMEPAGE VIEW ── */
             <>
-              {/* Best of Piano */}
+              {/* Recently added */}
               <section style={{ marginBottom: "64px" }}>
-                <div style={{ marginBottom: "20px" }}>
-                  <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", color: "#fff", marginBottom: "4px" }}>Best of Piano</h2>
-                  <p style={{ fontSize: "13px", color: "#7a6360" }}>The most searched and loved piano scores in the community.</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "20px" }}>
+                  <div>
+                    <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", color: "#fff", marginBottom: "4px" }}>Recently added</h2>
+                    <p style={{ fontSize: "13px", color: "#7a6360" }}>Fresh scores uploaded by the community.</p>
+                  </div>
                 </div>
                 {loading ? (
                   <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
                 ) : (
                   <div className="mob-2col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
-                    {pianoScores.map(s => <ScoreCard key={s.id} score={s} />)}
+                    {newScores.map(s => <ScoreCard key={s.id} score={s} />)}
                   </div>
                 )}
               </section>

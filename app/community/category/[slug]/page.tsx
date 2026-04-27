@@ -21,6 +21,7 @@ const CATEGORY_META: Record<string, { name: string; desc: string; image: string 
   choir:      { name: "Vocal & Choir",         desc: "Solo voice, art songs, opera, and choral arrangements.",        image: "/categories/detail/choir.webp" },
   percussion: { name: "Percussion",            desc: "Drums, mallets, timpani, and percussion ensembles.",            image: "/categories/detail/brass.webp" },
   soundtracks:{ name: "Soundtracks",           desc: "Music from movies, TV series, and video games.",                image: "/categories/detail/Symphomic.webp" },
+  "big-band": { name: "Big Band",              desc: "Jazz big band, swing, and large ensemble arrangements.",         image: "/categories/detail/brass.webp" },
 };
 
 const ALL_CATEGORIES = [
@@ -34,6 +35,7 @@ const ALL_CATEGORIES = [
   { slug: "choir",       name: "Vocal & Choir" },
   { slug: "percussion",  name: "Percussion" },
   { slug: "soundtracks", name: "Soundtracks" },
+  { slug: "big-band",    name: "Big Band" },
 ];
 
 export default function CategoryPage() {

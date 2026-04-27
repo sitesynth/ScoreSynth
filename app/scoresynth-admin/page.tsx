@@ -37,7 +37,7 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
 // Change this if you rename the account
 const ADMIN_HANDLE = "mayyascoresynth";
 
-const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "chamber", "symphonic", "guitar", "choir", "percussion", "soundtracks"];
+const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "chamber", "symphonic", "guitar", "choir", "percussion", "soundtracks", "big-band"];
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
 const inputStyle: React.CSSProperties = {

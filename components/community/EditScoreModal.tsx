@@ -27,7 +27,7 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   }
 }
 
-const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "chamber", "symphonic", "guitar", "choir", "percussion", "soundtracks"];
+const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "chamber", "symphonic", "guitar", "choir", "percussion", "soundtracks", "big-band"];
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
 const inputStyle: React.CSSProperties = {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Score } from "@/lib/supabase/types";
+import { processPdfForUpload } from "@/lib/pdf-processor";
 
 async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   try {
@@ -70,6 +71,9 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
   const [coverDrag,   setCoverDrag]   = useState(false);
   const [pdfDrag,     setPdfDrag]     = useState(false);
   const [audioDrag,   setAudioDrag]   = useState(false);
+  const [newPartDragIndex, setNewPartDragIndex] = useState<number | null>(null);
+
+  const isPdfFile = (f: File) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
 
   const makeDrop = (
     accept: (f: File) => boolean,
@@ -105,10 +109,11 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
 
     // Upload new PDF if provided
     if (pdfFile) {
+      const processedPdf = await processPdfForUpload(pdfFile, title.trim());
       const pdfPath = `${user.id}/${Date.now()}-${pdfFile.name}`;
       const { error: pdfErr } = await supabase.storage
         .from("score-files")
-        .upload(pdfPath, pdfFile);
+        .upload(pdfPath, processedPdf);
       if (pdfErr) { setError(`PDF upload failed: ${pdfErr.message}`); setSaving(false); return; }
       pdfUrl = pdfPath;
     }
@@ -141,9 +146,10 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
     const uploadedNewParts: { name: string; pdf_url: string }[] = [];
     for (const part of newParts) {
       if (!part.name.trim() || !part.file) continue;
+      const processedPart = await processPdfForUpload(part.file, `${title.trim()} — ${part.name.trim()}`);
       const ext = part.file.name.split(".").pop()?.toLowerCase() ?? "pdf";
       const partPath = `${user.id}/parts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: partErr } = await supabase.storage.from("score-files").upload(partPath, part.file);
+      const { error: partErr } = await supabase.storage.from("score-files").upload(partPath, processedPart);
       if (partErr) { setError(`Part upload failed: ${partErr.message}`); setSaving(false); return; }
       uploadedNewParts.push({ name: part.name.trim(), pdf_url: partPath });
     }
@@ -333,7 +339,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
             </div>
           )}
           <label
-            {...makeDrop(f => f.type === "application/pdf" || f.name.endsWith(".pdf"), setPdfFile, setPdfDrag)}
+            {...makeDrop(isPdfFile, setPdfFile, setPdfDrag)}
             style={{
               display: "flex", alignItems: "center", gap: "10px",
               padding: pdfDrag ? "18px 14px" : "10px 14px", borderRadius: "8px", cursor: "pointer",
@@ -466,17 +472,43 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
                     onChange={e => updateNewPartName(i, e.target.value)}
                     style={{ ...inputStyle, padding: "7px 10px", fontSize: "12px", background: "rgba(255,255,255,0.05)" }}
                   />
-                  <label style={{
-                    display: "flex", alignItems: "center", gap: "6px",
-                    padding: "7px 10px", borderRadius: "8px", cursor: "pointer",
-                    background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.1)",
-                    fontSize: "12px", color: part.file ? "#c8a97e" : "#6b5452", overflow: "hidden",
-                  }}>
+                  <label
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setNewPartDragIndex(i);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                        setNewPartDragIndex(prev => (prev === i ? null : prev));
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setNewPartDragIndex(null);
+                      const file = e.dataTransfer.files[0];
+                      if (file && isPdfFile(file)) {
+                        updateNewPartFile(i, file);
+                      }
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "6px",
+                      padding: newPartDragIndex === i ? "14px 10px" : "7px 10px",
+                      borderRadius: "8px", cursor: "pointer",
+                      background: newPartDragIndex === i ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
+                      border: newPartDragIndex === i
+                        ? "1px dashed rgba(255,255,255,0.4)"
+                        : "1px dashed rgba(255,255,255,0.1)",
+                      fontSize: "12px", color: part.file ? "#c8a97e" : "#6b5452", overflow: "hidden",
+                      transition: "padding 0.15s, border-color 0.15s, background 0.15s",
+                      justifyContent: newPartDragIndex === i ? "center" : undefined,
+                    }}
+                  >
                     <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
                       <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                     </svg>
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {part.file ? part.file.name : "Choose PDF…"}
+                      {newPartDragIndex === i ? "Drop PDF here" : part.file ? part.file.name : "Choose or drag PDF…"}
                     </span>
                     <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => updateNewPartFile(i, e.target.files?.[0] ?? null)} />
                   </label>

@@ -86,6 +86,7 @@ export default function CommunityPage() {
 
   // Homepage sections (no search active)
   const newScores   = useMemo(() => [...allScores].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6), [allScores]);
+  const pianoScores = useMemo(() => allScores.filter(s => s.category === "piano"), [allScores]);
   const brassScores = useMemo(() => allScores.filter(s => s.category === "brass"), [allScores]);
 
   const handleTagClick = (tag: string) => {
@@ -287,6 +288,26 @@ export default function CommunityPage() {
                     </Link>
                   ))}
                 </div>
+              </section>
+
+              {/* Best of Piano */}
+              <section style={{ marginBottom: "64px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "20px" }}>
+                  <div>
+                    <h2 style={{ fontFamily: "Georgia, serif", fontSize: "22px", color: "#fff", marginBottom: "4px" }}>Best of Piano</h2>
+                    <p style={{ fontSize: "13px", color: "#7a6360" }}>The most loved piano scores in the community.</p>
+                  </div>
+                  <Link href="/community/category/piano" style={{ fontSize: "13px", color: "#6b8fbd", textDecoration: "none", whiteSpace: "nowrap" }}>
+                    Browse all →
+                  </Link>
+                </div>
+                {loading ? (
+                  <p style={{ fontSize: "13px", color: "#6b5452" }}>Loading…</p>
+                ) : (
+                  <div className="mob-2col tab-2col" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
+                    {pianoScores.map(s => <ScoreCard key={s.id} score={s} />)}
+                  </div>
+                )}
               </section>
 
               {/* Brass Bands */}

@@ -27,6 +27,9 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   }
 }
 
+const MAX_FILE_MB = 50;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+
 // Strips non-ASCII / spaces from filename so Supabase Storage accepts the key
 const safeStorageName = (file: File) => {
   const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "bin";
@@ -146,6 +149,16 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
 
   const handleSave = async () => {
     if (!title.trim()) { setError("Title is required."); return; }
+    if (pdfFile && pdfFile.size > MAX_FILE_BYTES) {
+      setError(`PDF is too large (${(pdfFile.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${MAX_FILE_MB} MB.`);
+      return;
+    }
+    for (const part of newParts) {
+      if (part.file && part.file.size > MAX_FILE_BYTES) {
+        setError(`Part "${part.name || part.file.name}" is too large (${(part.file.size / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${MAX_FILE_MB} MB.`);
+        return;
+      }
+    }
     setSaving(true);
     setError(null);
 

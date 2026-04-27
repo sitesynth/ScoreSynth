@@ -168,4 +168,4 @@ export const ALL_SCORES: Score[] = [
   },
 ];
 
-export const SCORE_TAGS = ["All", "Piano", "Strings", "Brass", "Symphonic", "Guitar", "Choir"];
+export const SCORE_TAGS = ["All", "Piano", "Strings", "Woodwinds", "Brass", "Guitar", "Percussion", "Choir", "Chamber", "Orchestra", "Jazz", "Soundtracks"];

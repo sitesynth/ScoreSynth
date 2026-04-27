@@ -11,17 +11,17 @@ import type { Score } from "@/lib/supabase/types";
 import ScoreCard from "@/components/community/ScoreCard";
 
 const CATEGORY_META: Record<string, { name: string; desc: string; image: string }> = {
-  piano:      { name: "Piano & Keyboard",      desc: "Solo piano, organ, harpsichord, and accompaniment scores.",     image: "/categories/detail/piano.webp" },
-  strings:    { name: "Strings",               desc: "Violin, viola, cello, double bass, and string ensembles.",      image: "/categories/detail/strings.webp" },
-  woodwinds:  { name: "Woodwinds",             desc: "Flute, clarinet, oboe, saxophone, and bassoon repertoire.",     image: "/categories/detail/strings.webp" },
-  brass:      { name: "Brass",                 desc: "Trumpet, trombone, french horn, tuba, and brass ensembles.",    image: "/categories/detail/brass.webp" },
-  chamber:    { name: "Chamber Music",         desc: "Duos, trios, quartets, and small instrumental groups.",         image: "/categories/detail/strings.webp" },
-  symphonic:  { name: "Symphonic & Orchestral",desc: "Full scores and parts for chamber and symphony orchestras.",    image: "/categories/detail/Symphomic.webp" },
-  guitar:     { name: "Guitar & Fretted",      desc: "Classical guitar, acoustic, electric, and ukulele.",            image: "/categories/detail/guitar.webp" },
-  choir:      { name: "Vocal & Choir",         desc: "Solo voice, art songs, opera, and choral arrangements.",        image: "/categories/detail/choir.webp" },
-  percussion: { name: "Percussion",            desc: "Drums, mallets, timpani, and percussion ensembles.",            image: "/categories/detail/brass.webp" },
-  soundtracks:{ name: "Soundtracks",           desc: "Music from movies, TV series, and video games.",                image: "/categories/detail/Symphomic.webp" },
-  "big-band": { name: "Big Band",              desc: "Jazz big band, swing, and large ensemble arrangements.",         image: "/categories/detail/brass.webp" },
+  piano:      { name: "Piano & Keyboard", desc: "Solo piano, organ, harpsichord, and accompaniment scores.",              image: "/categories/detail/piano.webp" },
+  strings:    { name: "Strings",          desc: "Violin, viola, cello, double bass, and string ensembles.",               image: "/categories/detail/strings.webp" },
+  woodwinds:  { name: "Woodwinds",        desc: "Flute, clarinet, oboe, saxophone, and bassoon repertoire.",              image: "/categories/detail/strings.webp" },
+  brass:      { name: "Brass",            desc: "Trumpet, trombone, french horn, tuba, and brass ensembles.",             image: "/categories/detail/brass.webp" },
+  guitar:     { name: "Guitar",           desc: "Classical guitar, acoustic, electric, and ukulele.",                     image: "/categories/detail/guitar.webp" },
+  percussion: { name: "Percussion",       desc: "Drums, mallets, timpani, and percussion ensembles.",                     image: "/categories/detail/brass.webp" },
+  choir:      { name: "Vocal & Choir",    desc: "Solo voice, art songs, opera, and choral arrangements.",                 image: "/categories/detail/choir.webp" },
+  chamber:    { name: "Chamber Music",    desc: "Duos, trios, quartets, and small instrumental groups.",                  image: "/categories/detail/strings.webp" },
+  symphonic:  { name: "Orchestra",        desc: "Full scores and parts for symphony orchestras and concert bands.",        image: "/categories/detail/Symphomic.webp" },
+  jazz:       { name: "Jazz & Big Band",  desc: "Jazz big band, swing, bebop, and large jazz ensemble arrangements.",      image: "/categories/detail/brass.webp" },
+  soundtracks:{ name: "Soundtracks",      desc: "Music from movies, TV series, and video games.",                         image: "/categories/detail/Symphomic.webp" },
 };
 
 const ALL_CATEGORIES = [
@@ -29,13 +29,13 @@ const ALL_CATEGORIES = [
   { slug: "strings",     name: "Strings" },
   { slug: "woodwinds",   name: "Woodwinds" },
   { slug: "brass",       name: "Brass" },
-  { slug: "chamber",     name: "Chamber" },
-  { slug: "symphonic",   name: "Symphonic" },
   { slug: "guitar",      name: "Guitar" },
-  { slug: "choir",       name: "Vocal & Choir" },
   { slug: "percussion",  name: "Percussion" },
+  { slug: "choir",       name: "Vocal & Choir" },
+  { slug: "chamber",     name: "Chamber Music" },
+  { slug: "symphonic",   name: "Orchestra" },
+  { slug: "jazz",        name: "Jazz & Big Band" },
   { slug: "soundtracks", name: "Soundtracks" },
-  { slug: "big-band",    name: "Big Band" },
 ];
 
 export default function CategoryPage() {

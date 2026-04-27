@@ -28,7 +28,20 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   }
 }
 
-const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "chamber", "symphonic", "guitar", "choir", "percussion", "soundtracks", "big-band"];
+const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "guitar", "percussion", "choir", "chamber", "symphonic", "jazz", "soundtracks"];
+const CATEGORY_LABELS: Record<string, string> = {
+  piano:       "Piano & Keyboard",
+  strings:     "Strings",
+  woodwinds:   "Woodwinds",
+  brass:       "Brass",
+  guitar:      "Guitar",
+  percussion:  "Percussion",
+  choir:       "Vocal & Choir",
+  chamber:     "Chamber Music",
+  symphonic:   "Orchestra",
+  jazz:        "Jazz & Big Band",
+  soundtracks: "Soundtracks",
+};
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
 type Part = { name: string; file: File | null };
@@ -268,7 +281,7 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
             {[
-              { value: category, onChange: (v: string) => setCategory(v), options: CATEGORIES.map(c => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) })) },
+              { value: category, onChange: (v: string) => setCategory(v), options: CATEGORIES.map(c => ({ value: c, label: CATEGORY_LABELS[c] ?? c })) },
               { value: difficulty, onChange: (v: string) => setDifficulty(v), options: DIFFICULTIES.map(d => ({ value: d, label: d })) },
             ].map((sel, i) => (
               <div key={i} style={{ position: "relative" }}>

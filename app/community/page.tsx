@@ -12,8 +12,17 @@ import { SCORE_TAGS } from "@/lib/scores";
 import ScoreCard from "@/components/community/ScoreCard";
 
 const TAG_TO_CATEGORY: Record<string, string> = {
-  Piano: "piano", Strings: "strings", Brass: "brass",
-  Symphonic: "symphonic", Guitar: "guitar", Choir: "choir",
+  Piano:      "piano",
+  Strings:    "strings",
+  Woodwinds:  "woodwinds",
+  Brass:      "brass",
+  Guitar:     "guitar",
+  Percussion: "percussion",
+  Choir:      "choir",
+  Chamber:    "chamber",
+  Orchestra:  "symphonic",
+  Jazz:       "jazz",
+  Soundtracks:"soundtracks",
 };
 
 export default function CommunityPage() {

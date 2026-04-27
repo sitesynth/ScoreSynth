@@ -27,7 +27,20 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
   }
 }
 
-const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "chamber", "symphonic", "guitar", "choir", "percussion", "soundtracks", "big-band"];
+const CATEGORIES = ["piano", "strings", "woodwinds", "brass", "guitar", "percussion", "choir", "chamber", "symphonic", "jazz", "soundtracks"];
+const CATEGORY_LABELS: Record<string, string> = {
+  piano:       "Piano & Keyboard",
+  strings:     "Strings",
+  woodwinds:   "Woodwinds",
+  brass:       "Brass",
+  guitar:      "Guitar",
+  percussion:  "Percussion",
+  choir:       "Vocal & Choir",
+  chamber:     "Chamber Music",
+  symphonic:   "Orchestra",
+  jazz:        "Jazz & Big Band",
+  soundtracks: "Soundtracks",
+};
 const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
 
 const inputStyle: React.CSSProperties = {
@@ -252,7 +265,7 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
           <select value={category} onChange={e => setCategory(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
             {CATEGORIES.map(c => (
               <option key={c} value={c} style={{ background: "#1e1513" }}>
-                {c.charAt(0).toUpperCase() + c.slice(1)}
+                {CATEGORY_LABELS[c] ?? c}
               </option>
             ))}
           </select>

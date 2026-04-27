@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Score } from "@/lib/supabase/types";
 import { processPdfForUpload } from "@/lib/pdf-processor";
@@ -87,6 +87,18 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
   const [newParts, setNewParts] = useState<{ name: string; file: File | null }[]>([]);
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState<string | null>(null);
+  // Collections
+  const [collections, setCollections] = useState<{ id: string; name: string; parent_id: string | null }[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(score.resource_collection_id ?? null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from("resource_collections").select("id, name, parent_id").eq("user_id", user.id).order("created_at")
+        .then(({ data }) => setCollections((data ?? []) as { id: string; name: string; parent_id: string | null }[]));
+    });
+  }, []);
   const [coverDrag,   setCoverDrag]   = useState(false);
   const [pdfDrag,     setPdfDrag]     = useState(false);
   const [audioDrag,   setAudioDrag]   = useState(false);
@@ -205,8 +217,9 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
       cover_url:     coverUrl,
       pdf_url:       pdfUrl,
       midi_url:      audioUrl,
-      parts:         allParts,
-      updated_at:    new Date().toISOString(),
+      parts:                  allParts,
+      resource_collection_id: selectedCollectionId,
+      updated_at:             new Date().toISOString(),
     };
 
     const { data, error: dbErr } = await supabase
@@ -450,6 +463,37 @@ export default function EditScoreModal({ score, onClose, onSuccess }: Props) {
             <audio controls src={URL.createObjectURL(audioFile)} style={{ width: "100%", marginTop: "8px", height: "36px" }} />
           )}
         </div>
+
+        {/* ── Collection ── */}
+        {collections.length > 0 && (
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "16px" }}>
+            <p style={{ fontSize: "13px", fontWeight: 600, color: "#e8dbd8", margin: "0 0 10px" }}>Collection</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "7px" }}>
+              {collections.map(c => {
+                const active = selectedCollectionId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setSelectedCollectionId(active ? null : c.id)}
+                    style={{
+                      padding: "5px 13px", borderRadius: "20px", fontSize: "12px", fontWeight: 500,
+                      cursor: "pointer", transition: "all 0.15s",
+                      background: active ? "rgba(200,169,126,0.18)" : "rgba(255,255,255,0.05)",
+                      border: active ? "1px solid rgba(200,169,126,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                      color: active ? "#c8a97e" : "#8a7270",
+                      paddingLeft: c.parent_id ? "24px" : undefined,
+                    }}
+                  >
+                    {active && <span style={{ marginRight: "5px", fontSize: "10px" }}>✓</span>}
+                    {c.parent_id && <span style={{ opacity: 0.5, marginRight: "3px" }}>↳</span>}
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── Instrument Parts ── */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: "16px" }}>

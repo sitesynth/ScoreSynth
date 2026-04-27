@@ -79,6 +79,9 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
 
   // Instrument parts
   const [parts, setParts] = useState<Part[]>([]);
+  const [partFileDragIdx,  setPartFileDragIdx]  = useState<number | null>(null);
+  const [reorderDrag,      setReorderDrag]      = useState<{ fromIdx: number } | null>(null);
+  const [reorderOverIdx,   setReorderOverIdx]   = useState<number | null>(null);
   const [copyrightConfirmed, setCopyrightConfirmed] = useState(false);
 
   // Collections
@@ -149,6 +152,16 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
     setParts(prev => prev.map((p, idx) => idx === i ? { ...p, name } : p));
   const updatePartFile = (i: number, file: File | null) =>
     setParts(prev => prev.map((p, idx) => idx === i ? { ...p, file } : p));
+
+  const reorderParts = (from: number, to: number) => {
+    if (from === to) return;
+    setParts(prev => {
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  };
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: "8px",
@@ -443,47 +456,62 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
             {parts.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "10px" }}>
                 {parts.map((part, i) => (
-                  <div key={i} style={{
-                    display: "grid", gridTemplateColumns: "1fr 1fr auto",
-                    gap: "8px", alignItems: "center",
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.07)",
-                    borderRadius: "10px", padding: "8px 10px",
-                  }}>
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={e => { if ((e.target as HTMLElement).closest("label")) { e.preventDefault(); return; } setReorderDrag({ fromIdx: i }); }}
+                    onDragOver={e => { if (reorderDrag) { e.preventDefault(); setReorderOverIdx(i); } }}
+                    onDragLeave={() => { if (reorderDrag) setReorderOverIdx(null); }}
+                    onDrop={e => { if (reorderDrag) { e.stopPropagation(); reorderParts(reorderDrag.fromIdx, i); setReorderDrag(null); setReorderOverIdx(null); } }}
+                    onDragEnd={() => { setReorderDrag(null); setReorderOverIdx(null); }}
+                    style={{
+                      display: "grid", gridTemplateColumns: "auto 1fr 1fr auto",
+                      gap: "8px", alignItems: "center",
+                      background: reorderOverIdx === i ? "rgba(192,57,43,0.08)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${reorderOverIdx === i ? "rgba(192,57,43,0.35)" : "rgba(255,255,255,0.07)"}`,
+                      borderRadius: "10px", padding: "8px 10px",
+                      transition: "background 0.12s, border-color 0.12s",
+                    }}
+                  >
+                    {/* Drag handle */}
+                    <svg width="12" height="12" fill="none" stroke="#4a3532" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0, cursor: "grab" }}>
+                      <line x1="3" y1="8"  x2="21" y2="8"/>
+                      <line x1="3" y1="16" x2="21" y2="16"/>
+                    </svg>
                     <input
                       type="text"
                       placeholder="Name, e.g. Violin I"
                       value={part.name}
                       onChange={e => updatePartName(i, e.target.value)}
-                      style={{
-                        ...inputStyle, padding: "7px 10px", fontSize: "12px",
-                        background: "rgba(255,255,255,0.05)",
-                      }}
+                      style={{ ...inputStyle, padding: "7px 10px", fontSize: "12px", background: "rgba(255,255,255,0.05)" }}
                     />
-                    <label style={{
-                      display: "flex", alignItems: "center", gap: "6px",
-                      padding: "7px 10px", borderRadius: "8px", cursor: "pointer",
-                      background: "rgba(255,255,255,0.05)", border: "1px dashed rgba(255,255,255,0.1)",
-                      fontSize: "12px", color: part.file ? "#c8a97e" : "#6b5452",
-                      overflow: "hidden",
-                    }}>
+                    <label
+                      onDragOver={e => { e.preventDefault(); e.stopPropagation(); setPartFileDragIdx(i); }}
+                      onDragLeave={e => { e.stopPropagation(); if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPartFileDragIdx(null); }}
+                      onDrop={e => { e.preventDefault(); e.stopPropagation(); setPartFileDragIdx(null); const f = e.dataTransfer.files[0]; if (f && (f.type === "application/pdf" || f.name.endsWith(".pdf"))) updatePartFile(i, f); }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "6px",
+                        padding: partFileDragIdx === i ? "14px 10px" : "7px 10px",
+                        borderRadius: "8px", cursor: "pointer",
+                        background: partFileDragIdx === i ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
+                        border: partFileDragIdx === i ? "1px dashed rgba(255,255,255,0.4)" : "1px dashed rgba(255,255,255,0.1)",
+                        fontSize: "12px", color: part.file ? "#c8a97e" : "#6b5452", overflow: "hidden",
+                        transition: "padding 0.15s, border-color 0.15s, background 0.15s",
+                        justifyContent: partFileDragIdx === i ? "center" : undefined,
+                      }}
+                    >
                       <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
                         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                       </svg>
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {part.file ? part.file.name : "Choose PDF…"}
+                        {partFileDragIdx === i ? "Drop PDF here" : part.file ? part.file.name : "Choose or drag PDF…"}
                       </span>
                       <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => updatePartFile(i, e.target.files?.[0] ?? null)} />
                     </label>
                     <button
                       onClick={() => removePart(i)}
                       title="Remove"
-                      style={{
-                        background: "none", border: "none", color: "#4a3532",
-                        cursor: "pointer", padding: "4px", borderRadius: "6px",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        transition: "color 0.15s",
-                      }}
+                      style={{ background: "none", border: "none", color: "#4a3532", cursor: "pointer", padding: "4px", borderRadius: "6px", display: "flex", alignItems: "center", transition: "color 0.15s" }}
                       onMouseEnter={e => (e.currentTarget.style.color = "#c0392b")}
                       onMouseLeave={e => (e.currentTarget.style.color = "#4a3532")}
                     >

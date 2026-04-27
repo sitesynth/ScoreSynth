@@ -85,6 +85,9 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
   const [partFileDragIdx,  setPartFileDragIdx]  = useState<number | null>(null);
   const [reorderDrag,      setReorderDrag]      = useState<{ fromIdx: number } | null>(null);
   const [reorderOverIdx,   setReorderOverIdx]   = useState<number | null>(null);
+  const [coverDrag,  setCoverDrag]  = useState(false);
+  const [pdfDrag,    setPdfDrag]    = useState(false);
+  const [audioDrag,  setAudioDrag]  = useState(false);
   const [copyrightConfirmed, setCopyrightConfirmed] = useState(false);
 
   // Collections
@@ -165,6 +168,20 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
       return next;
     });
   };
+
+  const makeDrop = (
+    accept: (f: File) => boolean,
+    onFile: (f: File) => void,
+    setDrag: (v: boolean) => void,
+  ) => ({
+    onDragOver:  (e: React.DragEvent) => { e.preventDefault(); setDrag(true); },
+    onDragLeave: (e: React.DragEvent) => { e.preventDefault(); setDrag(false); },
+    onDrop:      (e: React.DragEvent) => {
+      e.preventDefault(); setDrag(false);
+      const f = e.dataTransfer.files[0];
+      if (f && accept(f)) onFile(f);
+    },
+  });
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: "8px",
@@ -354,16 +371,22 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
           {/* Cover image */}
           <div>
             <label style={{ fontSize: "12px", color: "#6b5452", marginBottom: "6px", display: "block" }}>Cover Image (PNG/JPG)</label>
-            <label style={{
-              display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px",
-              borderRadius: "8px", cursor: "pointer", background: "#1e1513",
-              border: "1px dashed rgba(255,255,255,0.15)", fontSize: "13px",
-              color: coverFile ? "#e8dbd8" : "#6b5452",
-            }}>
+            <label
+              {...makeDrop(f => f.type.startsWith("image/"), setCoverFile, setCoverDrag)}
+              style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                padding: coverDrag ? "18px 14px" : "10px 14px",
+                borderRadius: "8px", cursor: "pointer",
+                background: coverDrag ? "rgba(255,255,255,0.05)" : "#1e1513",
+                border: coverDrag ? "1px dashed rgba(255,255,255,0.4)" : coverFile ? "1px dashed rgba(200,169,126,0.4)" : "1px dashed rgba(255,255,255,0.15)",
+                fontSize: "13px", color: coverFile ? "#e8dbd8" : "#6b5452",
+                transition: "padding 0.15s, border-color 0.15s, background 0.15s",
+                justifyContent: coverDrag ? "center" : undefined,
+              }}>
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
               </svg>
-              {coverFile ? coverFile.name : "Choose image…"}
+              {coverDrag ? "Drop image here" : coverFile ? coverFile.name : "Choose or drag image…"}
               <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => setCoverFile(e.target.files?.[0] ?? null)} />
             </label>
             {coverFile && (
@@ -376,17 +399,29 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
           {/* Main PDF */}
           <div>
             <label style={{ fontSize: "12px", color: "#6b5452", marginBottom: "6px", display: "block" }}>Full Score PDF *</label>
-            <label style={{
-              display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px",
-              borderRadius: "8px", cursor: "pointer", background: "#1e1513",
-              border: "1px dashed rgba(255,255,255,0.15)", fontSize: "13px",
-              color: pdfFile ? "#e8dbd8" : "#6b5452",
-            }}>
+            <label
+              {...makeDrop(f => f.type === "application/pdf" || f.name.endsWith(".pdf"), setPdfFile, setPdfDrag)}
+              style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                padding: pdfDrag ? "18px 14px" : "10px 14px",
+                borderRadius: "8px", cursor: "pointer",
+                background: pdfDrag ? "rgba(255,255,255,0.05)" : "#1e1513",
+                border: pdfDrag ? "1px dashed rgba(255,255,255,0.4)" : pdfFile ? "1px solid rgba(200,169,126,0.4)" : "1px dashed rgba(255,255,255,0.15)",
+                fontSize: "13px", color: pdfFile ? "#c8a97e" : "#6b5452",
+                transition: "padding 0.15s, border-color 0.15s, background 0.15s",
+                justifyContent: pdfDrag ? "center" : undefined,
+              }}>
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
-              {pdfFile ? pdfFile.name : "Choose PDF…"}
+              {pdfDrag ? "Drop PDF here" : pdfFile ? pdfFile.name : "Choose or drag PDF…"}
               <input type="file" accept=".pdf" style={{ display: "none" }} onChange={e => setPdfFile(e.target.files?.[0] ?? null)} />
+              {pdfFile && !pdfDrag && (
+                <button type="button"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); setPdfFile(null); }}
+                  style={{ marginLeft: "auto", background: "none", border: "none", color: "#6b5452", cursor: "pointer", fontSize: "18px", lineHeight: 1, padding: 0 }}
+                >×</button>
+              )}
             </label>
           </div>
 
@@ -396,20 +431,26 @@ export default function UploadScoreModal({ onClose, onSuccess }: Props) {
             <p style={{ fontSize: "11px", color: "#6b5452", margin: "0 0 10px", lineHeight: 1.5 }}>
               Attach an MP3 or WAV recording so listeners can hear the piece.
             </p>
-            <label style={{
-              display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px",
-              borderRadius: "8px", cursor: "pointer", background: "#1e1513",
-              border: `1px dashed ${audioFile ? "rgba(200,169,126,0.45)" : "rgba(255,255,255,0.15)"}`,
-              fontSize: "13px", color: audioFile ? "#c8a97e" : "#6b5452",
-            }}>
+            <label
+              {...makeDrop(f => f.type.startsWith("audio/"), setAudioFile, setAudioDrag)}
+              style={{
+                display: "flex", alignItems: "center", gap: "10px",
+                padding: audioDrag ? "18px 14px" : "10px 14px",
+                borderRadius: "8px", cursor: "pointer",
+                background: audioDrag ? "rgba(255,255,255,0.05)" : "#1e1513",
+                border: audioDrag ? "1px dashed rgba(255,255,255,0.4)" : audioFile ? "1px solid rgba(200,169,126,0.45)" : "1px dashed rgba(255,255,255,0.15)",
+                fontSize: "13px", color: audioFile ? "#c8a97e" : "#6b5452",
+                transition: "padding 0.15s, border-color 0.15s, background 0.15s",
+                justifyContent: audioDrag ? "center" : undefined,
+              }}>
               <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10"/>
                 <polygon points="10 8 16 12 10 16 10 8"/>
               </svg>
               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {audioFile ? audioFile.name : "Choose audio file…"}
+                {audioDrag ? "Drop audio here" : audioFile ? audioFile.name : "Choose or drag audio…"}
               </span>
-              {audioFile && (
+              {audioFile && !audioDrag && (
                 <button
                   type="button"
                   onClick={e => { e.preventDefault(); e.stopPropagation(); setAudioFile(null); }}

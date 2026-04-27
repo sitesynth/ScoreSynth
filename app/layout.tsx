@@ -13,9 +13,15 @@ export const metadata: Metadata = {
   description:
     "Discover, upload and share classical sheet music. Browse piano, strings, chamber, orchestral scores and more. Free and premium scores from musicians worldwide.",
   metadataBase: new URL("https://scoresynth.com"),
+  manifest: "/site.webmanifest",
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: "/icon.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-48.png", type: "image/png", sizes: "48x48" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: ["/favicon.ico"],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     type: "website",

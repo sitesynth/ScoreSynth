@@ -158,7 +158,7 @@ function AudioPlayer({ src, title }: { src: string; title: string }) {
 export default function ScoreDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const isLoggedIn = !!user;
 
   // Download a score PDF from Supabase, stamp it with ScoreSynth branding, and trigger save
@@ -291,7 +291,7 @@ export default function ScoreDetailPage() {
     const { commentId, authorId } = confirmDelete;
     const isCommentAuthor = user?.id === authorId;
     const isScoreAuthor = user?.id === score?.author_id;
-    if (!isCommentAuthor && !isScoreAuthor) return;
+    if (!isCommentAuthor && !isScoreAuthor && !isAdmin) return;
     const supabase = createClient();
     const { error } = await supabase.from("comments").delete().eq("id", commentId);
     if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
@@ -762,8 +762,8 @@ export default function ScoreDetailPage() {
                     Open in Editor
                   </Link>
 
-                  {/* Edit score — owner only */}
-                  {user?.id === score.author_id && (
+                  {/* Edit score — owner or admin */}
+                  {(user?.id === score.author_id || isAdmin) && (
                     <button
                       onClick={() => setShowEditModal(true)}
                       style={{

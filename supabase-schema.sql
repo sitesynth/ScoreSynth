@@ -21,6 +21,7 @@ create table public.profiles (
   instagram       text not null default '',
   avatar_url      text,
   banner_gradient text not null default 'linear-gradient(135deg, #7a2318 0%, #c0392b 60%, #8b2c1e 100%)',
+  role            text not null default 'user',
   created_at      timestamptz not null default now()
 );
 
@@ -30,26 +31,22 @@ returns trigger language plpgsql security definer set search_path = public as $$
 declare
   base_handle text;
   final_handle text;
-  suffix_len int := 6;
+  counter int := 0;
 begin
-  base_handle := lower(regexp_replace(split_part(new.email, '@', 1), '[^a-z0-9]', '_', 'g'));
-  if base_handle is null or length(base_handle) < 3 then
-    base_handle := 'user';
-  end if;
-  base_handle := left(base_handle, 24);
+  -- Use UUID prefix, never email, to prevent email address disclosure via handle.
+  base_handle := 'user_' || left(replace(new.id::text, '-', ''), 8);
   final_handle := base_handle;
 
-  -- Avoid unique collisions when different emails normalize to same handle.
   while exists (select 1 from public.profiles p where p.handle = final_handle) loop
-    final_handle := left(base_handle, 30 - (suffix_len + 1)) || '_' || left(replace(new.id::text, '-', ''), suffix_len);
-    suffix_len := least(suffix_len + 1, 10);
+    counter := counter + 1;
+    final_handle := base_handle || '_' || counter::text;
   end loop;
 
   insert into public.profiles (id, handle, display_name)
   values (
     new.id,
     final_handle,
-    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1))
+    coalesce(new.raw_user_meta_data->>'full_name', 'User')
   );
   return new;
 end;
@@ -185,10 +182,16 @@ create policy "scores_insert_auth" on public.scores
   for insert with check (auth.uid() = author_id);
 
 create policy "scores_update_own" on public.scores
-  for update using (auth.uid() = author_id);
+  for update using (
+    auth.uid() = author_id
+    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
 
 create policy "scores_delete_own" on public.scores
-  for delete using (auth.uid() = author_id);
+  for delete using (
+    auth.uid() = author_id
+    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
 
 -- ── COMMENTS ──
 create policy "comments_select_public" on public.comments

@@ -322,7 +322,7 @@ const BANNER_GRADIENTS = [
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function PublicUserProfilePage() {
   const { handle } = useParams<{ handle: string }>();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isAdmin } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -514,6 +514,7 @@ export default function PublicUserProfilePage() {
   }, [currentUser, profileUser]);
 
   const isOwner = !!(currentUser && profileUser && currentUser.id === profileUser.id);
+  const canEditScores = isOwner || isAdmin;
 
   // ─── Handlers ───────────────────────────────────────────────────────────
   const handleFollow = async () => {
@@ -801,7 +802,6 @@ export default function PublicUserProfilePage() {
                         boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
                       }}
                     >
-                      {/* Gradient swatches */}
                       {BANNER_GRADIENTS.map((g, i) => (
                         <div key={i}
                           onClick={() => { setBannerGradient(g); setBannerImageUrl(null); setShowBannerPicker(false); saveBannerImmediate(g, null); }}
@@ -813,9 +813,7 @@ export default function PublicUserProfilePage() {
                           }}
                         />
                       ))}
-                      {/* Divider */}
                       <div style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.1)" }} />
-                      {/* Upload photo button */}
                       <button
                         onClick={() => bannerInputRef.current?.click()}
                         style={{
@@ -1179,8 +1177,8 @@ export default function PublicUserProfilePage() {
                             onClick={() => resourceScoreMenuId && setResourceScoreMenuId(null)}>
                             {visible.map(s => (
                               <div key={s.id} style={{ position: "relative", minWidth: 0 }}>
-                                <ScoreCard score={s} isOwner={isOwner} onEdit={setEditingScore} />
-                                {isOwner && (
+                                <ScoreCard score={s} isOwner={canEditScores} onEdit={setEditingScore} />
+                                {canEditScores && (
                                   <div style={{ position: "absolute", top: "8px", right: "8px", zIndex: 10 }}>
                                     <button
                                       onClick={e => { e.stopPropagation(); setResourceScoreMenuId(resourceScoreMenuId === s.id ? null : s.id); }}
@@ -1206,6 +1204,7 @@ export default function PublicUserProfilePage() {
                                           boxShadow: "0 8px 24px rgba(0,0,0,0.5)", minWidth: "150px", zIndex: 20,
                                         }}
                                       >
+                                        {isOwner && (
                                         <button
                                           onClick={() => { setResourceScoreMenuId(null); setMovingResourceScore(s); }}
                                           style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "6px" }}
@@ -1215,6 +1214,7 @@ export default function PublicUserProfilePage() {
                                           <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                                           Move to…
                                         </button>
+                                        )}
                                         <button
                                           onClick={() => { setResourceScoreMenuId(null); setEditingScore(s); }}
                                           style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "6px" }}

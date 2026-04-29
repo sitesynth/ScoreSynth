@@ -76,7 +76,7 @@ function InlineField({
 // ─── Collection card (Pinterest style) ──────────────────────────────────────
 type Collection = { id: string; name: string; count: number; covers: (string | null)[]; parent_id: string | null; cover_url?: string | null; is_public?: boolean };
 
-function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverChange, onTogglePublic }: {
+function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverChange, onTogglePublic, onMove }: {
   coll: Collection;
   onClick: () => void;
   isOwner?: boolean;
@@ -84,6 +84,7 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverCha
   onRename?: (newName: string) => void;
   onCoverChange?: (file: File) => void;
   onTogglePublic?: () => void;
+  onMove?: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -250,6 +251,27 @@ function CollectionCard({ coll, onClick, isOwner, onDelete, onRename, onCoverCha
                 </svg>
                 Rename
               </button>
+              {onMove && coll.id !== "unsorted" && (
+                <>
+                  <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
+                  <button
+                    onClick={e => { e.stopPropagation(); setMenuOpen(false); onMove(); }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "8px",
+                      width: "100%", padding: "8px 10px", background: "none",
+                      border: "none", color: "#e8dbd8", fontSize: "13px",
+                      cursor: "pointer", borderRadius: "6px", textAlign: "left",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "none"}
+                  >
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                    Move to…
+                  </button>
+                </>
+              )}
               {onTogglePublic && coll.id !== "unsorted" && (
                 <>
                   <div style={{ height: "1px", background: "rgba(255,255,255,0.07)", margin: "4px 0" }} />
@@ -390,6 +412,8 @@ export default function PublicUserProfilePage() {
   const [createCollCropSrc, setCreateCollCropSrc] = useState<string | null>(null);
   const createCollCoverInputRef = useRef<HTMLInputElement>(null);
   const [movingResourceScore, setMovingResourceScore] = useState<Score | null>(null);
+  const [movingResourceColl, setMovingResourceColl] = useState<Collection | null>(null);
+  const [deletingResourceColl, setDeletingResourceColl] = useState<Collection | null>(null);
   const [resourceScoreMenuId, setResourceScoreMenuId] = useState<string | null>(null);
   const [savedScoreMenuId, setSavedScoreMenuId] = useState<string | null>(null);
 
@@ -643,11 +667,12 @@ export default function PublicUserProfilePage() {
   };
 
   const handleDeleteResourceColl = async (collId: string) => {
-    if (!currentUser || !window.confirm("Delete this collection? Scores will move back to All resources.")) return;
+    if (!currentUser) return;
     const supabase = createClient();
     await supabase.from("resource_collections").delete().eq("id", collId).eq("user_id", currentUser.id);
     setResourceColls(prev => prev.filter(c => c.id !== collId));
     setUserScores(prev => prev.map(s => s.resource_collection_id === collId ? { ...s, resource_collection_id: null } : s));
+    setDeletingResourceColl(null);
   };
 
   const handleRenameResourceColl = async (collId: string, newName: string) => {
@@ -707,6 +732,23 @@ export default function PublicUserProfilePage() {
       return { ...c, count: collScores.length, covers: collScores.slice(0, 4).map(s => s.cover_url ?? null) };
     }));
     setMovingResourceScore(null);
+  };
+
+  const handleMoveResourceColl = async (collId: string, toParentId: string | null) => {
+    if (!currentUser) return;
+    // Prevent circular: can't move into itself or its own descendants
+    const getAllDescendantIds = (id: string): string[] => {
+      const children = resourceColls.filter(c => c.parent_id === id);
+      return [id, ...children.flatMap(c => getAllDescendantIds(c.id))];
+    };
+    if (toParentId !== null && getAllDescendantIds(collId).includes(toParentId)) return;
+    const supabase = createClient();
+    await supabase.from("resource_collections")
+      .update({ parent_id: toParentId })
+      .eq("id", collId)
+      .eq("user_id", currentUser.id);
+    setResourceColls(prev => prev.map(c => c.id === collId ? { ...c, parent_id: toParentId } : c));
+    setMovingResourceColl(null);
   };
 
   const [deletingScore, setDeletingScore] = useState<Score | null>(null);
@@ -1119,10 +1161,11 @@ export default function PublicUserProfilePage() {
                                   key={c.id} coll={c}
                                   onClick={() => setResourceColl(c.id)}
                                   isOwner={isOwner}
-                                  onDelete={() => handleDeleteResourceColl(c.id)}
+                                  onDelete={() => setDeletingResourceColl(c)}
                                   onRename={name => handleRenameResourceColl(c.id, name)}
                                   onCoverChange={isOwner ? (file) => handleUpdateCollectionCover(c.id, file) : undefined}
                                   onTogglePublic={isOwner ? () => handleTogglePublicResourceColl(c.id) : undefined}
+                                  onMove={isOwner ? () => setMovingResourceColl(c) : undefined}
                                 />
                               ))}
                               {/* Unsorted */}
@@ -1163,10 +1206,11 @@ export default function PublicUserProfilePage() {
                                       key={c.id} coll={c}
                                       onClick={() => setResourceColl(c.id)}
                                       isOwner={isOwner}
-                                      onDelete={() => handleDeleteResourceColl(c.id)}
+                                      onDelete={() => setDeletingResourceColl(c)}
                                       onRename={name => handleRenameResourceColl(c.id, name)}
                                       onCoverChange={isOwner ? (file) => handleUpdateCollectionCover(c.id, file) : undefined}
                                       onTogglePublic={isOwner ? () => handleTogglePublicResourceColl(c.id) : undefined}
+                                      onMove={isOwner ? () => setMovingResourceColl(c) : undefined}
                                     />
                                   ))}
                                 </div>
@@ -1248,46 +1292,154 @@ export default function PublicUserProfilePage() {
                         );
                       })()}
 
-                      {/* Move score modal */}
-                      {movingResourceScore && (
-                        <div
-                          onClick={() => setMovingResourceScore(null)}
-                          style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}
-                        >
-                          <div onClick={e => e.stopPropagation()} style={{
-                            background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: "14px", padding: "20px", minWidth: "280px",
-                            boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
-                          }}>
-                            <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff", marginBottom: "14px" }}>
-                              Move &ldquo;{movingResourceScore.title}&rdquo; to…
-                            </p>
-                            <button
-                              onClick={() => handleMoveResourceScore(movingResourceScore.id, null)}
-                              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left" }}
-                              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
-                              onMouseLeave={e => e.currentTarget.style.background = "none"}
-                            >
-                              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-                              All resources (no collection)
-                            </button>
-                            {resourceColls.map(c => (
+                      {/* Move folder modal */}
+                      {movingResourceColl && (() => {
+                        const getAllDescendantIds = (id: string): string[] => {
+                          const children = resourceColls.filter(c => c.parent_id === id);
+                          return [id, ...children.flatMap(c => getAllDescendantIds(c.id))];
+                        };
+                        const excluded = new Set(getAllDescendantIds(movingResourceColl.id));
+                        const available = resourceColls.filter(c => !excluded.has(c.id));
+                        // Render tree in correct parent→children order
+                        const renderTree = (parentId: string | null, depth: number): React.ReactNode[] => {
+                          return available
+                            .filter(c => c.parent_id === parentId)
+                            .flatMap(c => [
                               <button key={c.id}
-                                onClick={() => handleMoveResourceScore(movingResourceScore.id, c.id)}
-                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left", paddingLeft: c.parent_id ? "28px" : "10px" }}
+                                onClick={() => handleMoveResourceColl(movingResourceColl.id, c.id)}
+                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left", paddingLeft: `${10 + depth * 18}px` }}
                                 onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
                                 onMouseLeave={e => e.currentTarget.style.background = "none"}
                               >
-                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.5 }}><path d="M3 7a2 2 0 012-2h3.586a1 1 0 01.707.293L10.414 6.4A1 1 0 0011.121 6.4L12.3 5.3A1 1 0 0113 5h6a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
-                                {c.parent_id && <span style={{ opacity: 0.5, marginRight: "3px" }}>↳</span>}{c.name}
+                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.5, flexShrink: 0 }}><path d="M3 7a2 2 0 012-2h3.586a1 1 0 01.707.293L10.414 6.4A1 1 0 0011.121 6.4L12.3 5.3A1 1 0 0113 5h6a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+                                {depth > 0 && <span style={{ opacity: 0.4, marginRight: "2px", fontSize: "11px" }}>{"↳".repeat(1)}</span>}
+                                {c.name}
+                              </button>,
+                              ...renderTree(c.id, depth + 1),
+                            ]);
+                        };
+                        return (
+                          <div
+                            onClick={() => setMovingResourceColl(null)}
+                            style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <div onClick={e => e.stopPropagation()} style={{
+                              background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                              borderRadius: "14px", padding: "20px", minWidth: "280px", maxHeight: "70vh", overflowY: "auto",
+                              boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+                            }}>
+                              <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff", marginBottom: "14px" }}>
+                                Move &ldquo;{movingResourceColl.name}&rdquo; to…
+                              </p>
+                              <button
+                                onClick={() => handleMoveResourceColl(movingResourceColl.id, null)}
+                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
+                              >
+                                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                                Top level (no parent)
                               </button>
-                            ))}
-                            <button onClick={() => setMovingResourceScore(null)} style={{ width: "100%", marginTop: "8px", padding: "8px", background: "none", border: "none", color: "#6b5452", fontSize: "12px", cursor: "pointer" }}>
-                              Cancel
-                            </button>
+                              {renderTree(null, 0)}
+                              <button onClick={() => setMovingResourceColl(null)} style={{ width: "100%", marginTop: "8px", padding: "8px", background: "none", border: "none", color: "#6b5452", fontSize: "12px", cursor: "pointer" }}>
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Move score modal */}
+                      {movingResourceScore && (() => {
+                        const renderScoreTree = (parentId: string | null, depth: number): React.ReactNode[] =>
+                          resourceColls
+                            .filter(c => c.parent_id === parentId)
+                            .flatMap(c => [
+                              <button key={c.id}
+                                onClick={() => handleMoveResourceScore(movingResourceScore.id, c.id)}
+                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left", paddingLeft: `${10 + depth * 18}px` }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
+                              >
+                                <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24" style={{ opacity: 0.5, flexShrink: 0 }}><path d="M3 7a2 2 0 012-2h3.586a1 1 0 01.707.293L10.414 6.4A1 1 0 0011.121 6.4L12.3 5.3A1 1 0 0113 5h6a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+                                {depth > 0 && <span style={{ opacity: 0.4, marginRight: "2px", fontSize: "11px" }}>↳</span>}
+                                {c.name}
+                              </button>,
+                              ...renderScoreTree(c.id, depth + 1),
+                            ]);
+                        return (
+                          <div
+                            onClick={() => setMovingResourceScore(null)}
+                            style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <div onClick={e => e.stopPropagation()} style={{
+                              background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                              borderRadius: "14px", padding: "20px", minWidth: "280px", maxHeight: "70vh", overflowY: "auto",
+                              boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+                            }}>
+                              <p style={{ fontSize: "13px", fontWeight: 600, color: "#fff", marginBottom: "14px" }}>
+                                Move &ldquo;{movingResourceScore.title}&rdquo; to…
+                              </p>
+                              <button
+                                onClick={() => handleMoveResourceScore(movingResourceScore.id, null)}
+                                style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "9px 10px", background: "none", border: "none", color: "#e8dbd8", fontSize: "13px", cursor: "pointer", borderRadius: "7px", textAlign: "left" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
+                              >
+                                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                                All resources (no collection)
+                              </button>
+                              {renderScoreTree(null, 0)}
+                              <button onClick={() => setMovingResourceScore(null)} style={{ width: "100%", marginTop: "8px", padding: "8px", background: "none", border: "none", color: "#6b5452", fontSize: "12px", cursor: "pointer" }}>
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Delete folder confirmation */}
+                  {deletingResourceColl && (
+                    <div
+                      onClick={() => setDeletingResourceColl(null)}
+                      style={{ position: "fixed", inset: 0, zIndex: 110, background: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <div onClick={e => e.stopPropagation()} style={{
+                        background: "#2a1f1e", border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "16px", padding: "28px 24px", maxWidth: "360px", width: "100%",
+                        boxShadow: "0 20px 60px rgba(0,0,0,0.7)",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                          <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "rgba(192,57,43,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <svg width="16" height="16" fill="none" stroke="#c0392b" strokeWidth="2" viewBox="0 0 24 24">
+                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <p style={{ fontSize: "14px", fontWeight: 600, color: "#fff", margin: 0 }}>Delete folder?</p>
+                            <p style={{ fontSize: "12px", color: "#6b5452", margin: "2px 0 0" }}>This action cannot be undone</p>
                           </div>
                         </div>
-                      )}
+                        <p style={{ fontSize: "13px", color: "#c8b8b6", margin: "0 0 20px", lineHeight: 1.5 }}>
+                          Are you sure you want to delete <strong style={{ color: "#e8dbd8" }}>&ldquo;{deletingResourceColl.name}&rdquo;</strong>? Scores inside will move back to All resources.
+                        </p>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            onClick={() => setDeletingResourceColl(null)}
+                            style={{ flex: 1, padding: "9px", borderRadius: "9px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#c8b8b6", fontSize: "13px", cursor: "pointer" }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleDeleteResourceColl(deletingResourceColl.id)}
+                            style={{ flex: 1, padding: "9px", borderRadius: "9px", background: "#c0392b", border: "none", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
 

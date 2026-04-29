@@ -97,8 +97,7 @@ export async function GET(request: NextRequest) {
       };
 
       const preferredHandle = (user.user_metadata?.handle as string | undefined)
-        ?? user.email?.split("@")[0]
-        ?? "user";
+        ?? `user_${user.id.replace(/-/g, "").slice(0, 8)}`;
       const handle = await pickUniqueHandle(findByHandle, preferredHandle, user.id);
       const displayName =
         (user.user_metadata?.display_name as string | undefined)

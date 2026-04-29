@@ -15,11 +15,14 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const page = await pdf.getPage(1);
-    const viewport = page.getViewport({ scale: 1.5 });
+    const rawViewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(1.5, 1200 / Math.max(rawViewport.width, rawViewport.height));
+    const viewport = page.getViewport({ scale });
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
     return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.88));

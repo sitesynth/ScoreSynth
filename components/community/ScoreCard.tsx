@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import type { Score } from "@/lib/supabase/types";
 
 interface Props {
@@ -12,8 +13,33 @@ interface Props {
 
 export default function ScoreCard({ score, isOwner, onEdit }: Props) {
   const [hovered, setHovered] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<string | null>(null);
+  const loadedRef = useRef(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (score.cover_url || !score.pdf_url || loadedRef.current) return;
+    loadedRef.current = true;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.storage.from("score-files").createSignedUrl(score.pdf_url!, 300);
+        if (!data?.signedUrl) return;
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
+        const pdf = await pdfjsLib.getDocument(data.signedUrl).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.2 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport } as never).promise;
+        setPdfPreview(canvas.toDataURL("image/jpeg", 0.85));
+      } catch { /* leave placeholder */ }
+    })();
+  }, [score.cover_url, score.pdf_url]);
 
   return (
     <div
@@ -48,12 +74,12 @@ export default function ScoreCard({ score, isOwner, onEdit }: Props) {
         paddingTop: "70%",
         position: "relative",
         overflow: "hidden",
-        background: score.cover_url
-          ? `#f5f0eb url("${score.cover_url}") top center / cover no-repeat`
+        background: (score.cover_url || pdfPreview)
+          ? `#f5f0eb url("${score.cover_url || pdfPreview}") top center / cover no-repeat`
           : "#1a1210",
       }}>
-        {/* No-cover: sheet music placeholder */}
-        {!score.cover_url && (
+        {/* No-cover: sheet music placeholder — only while PDF preview hasn't loaded */}
+        {!score.cover_url && !pdfPreview && (
           <div style={{
             position: "absolute",
             top: "6%", left: "12%", right: "12%", bottom: "-55%",

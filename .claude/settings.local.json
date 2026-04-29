@@ -23,7 +23,19 @@
       "Bash(git pull *)",
       "Bash(npx tsc *)",
       "Bash(xargs grep *)",
-      "Bash(find /c/Users/mayya/Desktop/SITES/ScoreSynth -name \"*.sql\" -exec wc -l {} \\\\;)"
+      "Bash(find /c/Users/mayya/Desktop/SITES/ScoreSynth -name \"*.sql\" -exec wc -l {} \\\\;)",
+      "Bash(xargs ls *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(node scripts/reprocess-pdfs.mjs --dry-run)",
+      "Bash(node scripts/reprocess-pdfs.mjs)",
+      "mcp__Claude_in_Chrome__list_connected_browsers",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__browser_batch",
+      "mcp__Claude_in_Chrome__computer",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)"
     ]
   }
 }

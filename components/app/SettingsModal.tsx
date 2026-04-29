@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Tab = "account" | "community" | "notifications" | "security";
@@ -79,6 +80,9 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
   const [handle, setHandle] = useState(user.handle);
   const [changingHandle, setChangingHandle] = useState(false);
   const [newHandle, setNewHandle] = useState("");
+  const [handleSaving, setHandleSaving] = useState(false);
+  const [handleError, setHandleError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Notifications toggles
   const [notifs, setNotifs] = useState({ email: true, community: true, comments: false, billing: true });
@@ -88,6 +92,28 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
   const [keyCopied, setKeyCopied] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteMsg, setDeleteMsg] = useState("");
+
+  const saveHandle = async () => {
+    const trimmed = newHandle.trim();
+    if (!trimmed || trimmed === handle.replace("@", "")) return;
+    setHandleSaving(true);
+    setHandleError(null);
+    const supabase = createClient();
+    const { data: existing } = await supabase
+      .from("profiles").select("id").eq("handle", trimmed).maybeSingle();
+    if (existing) {
+      setHandleError("This handle is already taken.");
+      setHandleSaving(false);
+      return;
+    }
+    const { error } = await supabase
+      .from("profiles").update({ handle: trimmed }).eq("id", userId);
+    setHandleSaving(false);
+    if (error) { setHandleError("Failed to save. Try again."); return; }
+    setHandle("@" + trimmed);
+    setChangingHandle(false);
+    router.replace(`/community/user/${trimmed}`);
+  };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== "DELETE") return;
@@ -497,9 +523,12 @@ export default function SettingsModal({ activeTab, onTabChange, onClose, user, u
               <p style={{ fontSize: "12px", marginTop: "6px" }}>
                 <span style={{ color: "#6b8fbd", cursor: "pointer" }}>Review our Community guidelines</span>
               </p>
+              {handleError && (
+                <p style={{ fontSize: "12px", color: "#e87060", marginTop: "8px" }}>{handleError}</p>
+              )}
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "20px" }}>
-                <button onClick={() => setChangingHandle(false)} style={{ padding: "7px 16px", borderRadius: "8px", background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#a89690", fontSize: "13px", cursor: "pointer" }}>Cancel</button>
-                <button onClick={() => { if (newHandle) setHandle("@" + newHandle); setChangingHandle(false); }} style={{ padding: "7px 16px", borderRadius: "8px", background: "#c0392b", border: "none", color: "#fff", fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>Change handle</button>
+                <button onClick={() => { setChangingHandle(false); setHandleError(null); }} style={{ padding: "7px 16px", borderRadius: "8px", background: "none", border: "1px solid rgba(255,255,255,0.1)", color: "#a89690", fontSize: "13px", cursor: "pointer" }}>Cancel</button>
+                <button onClick={saveHandle} disabled={handleSaving || !newHandle.trim()} style={{ padding: "7px 16px", borderRadius: "8px", background: "#c0392b", border: "none", color: "#fff", fontSize: "13px", fontWeight: 500, cursor: "pointer", opacity: handleSaving || !newHandle.trim() ? 0.5 : 1 }}>{handleSaving ? "Saving…" : "Change handle"}</button>
               </div>
             </div>
           </div>

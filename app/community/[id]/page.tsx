@@ -203,6 +203,8 @@ export default function ScoreDetailPage() {
   const [authIntent, setAuthIntent] = useState<"download" | "purchase">("download");
   const [loadingScore, setLoadingScore] = useState(true);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [coverThumb, setCoverThumb] = useState<string | null>(null);
+  const [coverBroken, setCoverBroken] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ commentId: string; authorId: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -254,6 +256,26 @@ export default function ScoreDetailPage() {
 
     load();
   }, [id]);
+
+  // Generate cover thumbnail from PDF when cover_url is missing or broken
+  useEffect(() => {
+    if (!score || (score.cover_url && !coverBroken) || !pdfPreviewUrl) return;
+    (async () => {
+      try {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
+        const pdf = await pdfjsLib.getDocument(pdfPreviewUrl).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport } as never).promise;
+        setCoverThumb(canvas.toDataURL("image/jpeg", 0.88));
+      } catch { /* leave as-is */ }
+    })();
+  }, [score, pdfPreviewUrl, coverBroken]);
 
   // Check if current user liked this score
   useEffect(() => {
@@ -362,17 +384,23 @@ export default function ScoreDetailPage() {
 
           {/* Left — score preview + comments */}
           <div className="score-detail-left">
-            {/* Cover image */}
-            {score.cover_url && (
+            {/* Cover image — falls back to PDF thumbnail if cover_url is missing/broken */}
+            {(score.cover_url && !coverBroken) ? (
               <div style={{ borderRadius: "16px", overflow: "hidden", background: "#f5f0eb", marginBottom: "16px" }}>
                 <Image
                   src={score.cover_url}
                   alt={score.title}
                   width={800} height={400}
                   style={{ width: "100%", height: "auto" }}
+                  onError={() => setCoverBroken(true)}
                 />
               </div>
-            )}
+            ) : coverThumb ? (
+              <div style={{ borderRadius: "16px", overflow: "hidden", background: "#f5f0eb", marginBottom: "16px" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={coverThumb} alt={score.title} style={{ width: "100%", height: "auto", display: "block" }} />
+              </div>
+            ) : null}
 
             {/* PDF Preview */}
             {pdfPreviewUrl && (
@@ -389,8 +417,8 @@ export default function ScoreDetailPage() {
               </div>
             )}
 
-            {/* Fallback if no cover and no PDF preview */}
-            {!score.cover_url && !pdfPreviewUrl && (
+            {/* Fallback if no cover, no thumbnail, and no PDF preview */}
+            {((!score.cover_url || coverBroken) && !coverThumb && !pdfPreviewUrl) && (
               <div style={{ borderRadius: "16px", overflow: "hidden", background: "#f5f0eb", marginBottom: "32px" }}>
                 <Image
                   src="/scoreimagedefaultpreview.png"

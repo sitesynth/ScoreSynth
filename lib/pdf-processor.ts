@@ -44,54 +44,58 @@ export async function stampPdfForDownload(
   pdfArrayBuffer: ArrayBuffer,
   options: { downloaderHandle: string; uploaderHandle: string }
 ): Promise<Blob> {
-  const DARK      = rgb(33 / 255,  24 / 255,  23 / 255); // #211817
-  const RED       = rgb(192 / 255, 57 / 255,  43 / 255); // #c0392b
-  const FOOTER_H  = 22;  // pt
+  const DARK      = rgb(33 / 255, 24 / 255, 23 / 255); // #211817
+  const FOOTER_H  = 26;  // pt — slightly taller
   const TEXT_SIZE = 7;   // pt
-  const PAD_X     = 8;   // pt left padding
-
-  // Logo badge dimensions
-  const BADGE_W   = 11;  // pt
-  const BADGE_H   = 11;  // pt
-  const BADGE_R   = 2.5; // corner radius
+  const PAD_X     = 8;   // pt
+  const LOGO_SIZE = 16;  // pt — logo square size
 
   const { downloaderHandle, uploaderHandle } = options;
 
   const pdfDoc = await PDFDocument.load(pdfArrayBuffer, { ignoreEncryption: true });
   const font   = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontB  = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  // Try to load the real ScoreSynth logo
+  let logoImage = null;
+  try {
+    const res = await fetch("/icon-48.png");
+    if (res.ok) {
+      const bytes = await res.arrayBuffer();
+      logoImage = await pdfDoc.embedPng(bytes);
+    }
+  } catch { /* fallback: no logo */ }
 
   const label = `scoresynth.com  ·  For non-commercial use only  ·  Downloaded by @${downloaderHandle}  ·  Uploaded by @${uploaderHandle}`;
 
   for (const page of pdfDoc.getPages()) {
     const { width } = page.getSize();
 
-    // Dark footer bar
-    page.drawRectangle({ x: 0, y: 0, width, height: FOOTER_H, color: DARK });
-
-    const badgeY = (FOOTER_H - BADGE_H) / 2;
-
-    // Red rounded badge background (simulated with overlapping rects + circles)
-    page.drawRectangle({ x: PAD_X + BADGE_R, y: badgeY, width: BADGE_W - BADGE_R * 2, height: BADGE_H, color: RED });
-    page.drawRectangle({ x: PAD_X, y: badgeY + BADGE_R, width: BADGE_W, height: BADGE_H - BADGE_R * 2, color: RED });
-    page.drawCircle({ x: PAD_X + BADGE_R,            y: badgeY + BADGE_R,            size: BADGE_R, color: RED });
-    page.drawCircle({ x: PAD_X + BADGE_W - BADGE_R,  y: badgeY + BADGE_R,            size: BADGE_R, color: RED });
-    page.drawCircle({ x: PAD_X + BADGE_R,            y: badgeY + BADGE_H - BADGE_R,  size: BADGE_R, color: RED });
-    page.drawCircle({ x: PAD_X + BADGE_W - BADGE_R,  y: badgeY + BADGE_H - BADGE_R,  size: BADGE_R, color: RED });
-
-    // "S" letter centered in badge
-    const sSize = 6.5;
-    const sW    = fontB.widthOfTextAtSize("S", sSize);
-    page.drawText("S", {
-      x:    PAD_X + (BADGE_W - sW) / 2,
-      y:    badgeY + (BADGE_H - sSize) / 2 + 0.5,
-      size: sSize, font: fontB, color: WHITE,
+    // Semi-transparent dark footer bar (50% opacity)
+    page.drawRectangle({
+      x: 0, y: 0, width, height: FOOTER_H,
+      color: DARK, opacity: 0.5,
     });
 
-    // Footer text after badge
-    const textX = PAD_X + BADGE_W + 5;
-    const textY = (FOOTER_H - TEXT_SIZE) / 2;
-    page.drawText(label, { x: textX, y: textY, size: TEXT_SIZE, font, color: WHITE });
+    const centerY = FOOTER_H / 2;
+
+    // Real logo
+    if (logoImage) {
+      page.drawImage(logoImage, {
+        x:      PAD_X,
+        y:      centerY - LOGO_SIZE / 2,
+        width:  LOGO_SIZE,
+        height: LOGO_SIZE,
+        opacity: 1,
+      });
+    }
+
+    // Footer text
+    const textX = PAD_X + (logoImage ? LOGO_SIZE + 5 : 0);
+    const textY = centerY - TEXT_SIZE / 2;
+    page.drawText(label, {
+      x: textX, y: textY,
+      size: TEXT_SIZE, font, color: WHITE, opacity: 1,
+    });
   }
 
   const bytes = await pdfDoc.save();

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { buildBlastHtml, BLAST_SUBJECT, BLAST_BODY } from "@/lib/email-templates/blast";
+import { buildInviteHtml, INVITE_SUBJECT } from "@/lib/email-templates/invite";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,28 +16,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get all profiles with rotated handles (user_<8hex> pattern)
-  const { data: profiles, error } = await supabaseAdmin
-    .from("profiles")
-    .select("id")
-    .like("handle", "user\\_%");
+  const body = await req.json().catch(() => ({}));
 
-  if (error || !profiles) {
-    return NextResponse.json({ error: "Failed to fetch profiles" }, { status: 500 });
+  // Accept an explicit list of emails, or fall back to all registered users
+  let emails: string[] = [];
+
+  if (Array.isArray(body.emails) && body.emails.length > 0) {
+    emails = body.emails;
+  } else {
+    const { data: profiles, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id");
+
+    if (error || !profiles) {
+      return NextResponse.json({ error: "Failed to fetch profiles" }, { status: 500 });
+    }
+
+    for (const profile of profiles) {
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+      const email = userData?.user?.email;
+      if (email) emails.push(email);
+    }
   }
 
+  const html = buildInviteHtml();
   const results = { sent: 0, failed: 0, errors: [] as string[] };
 
-  for (const profile of profiles) {
-    const { data: userData } = await supabaseAdmin.auth.admin.getUserById(profile.id);
-    const email = userData?.user?.email;
-    if (!email) { results.failed++; continue; }
-
+  for (const email of emails) {
     const { error: sendError } = await resend.emails.send({
       from: "ScoreSynth <noreply@scoresynth.com>",
       to: email,
-      subject: BLAST_SUBJECT,
-      html: buildBlastHtml(BLAST_BODY, BLAST_SUBJECT),
+      subject: INVITE_SUBJECT,
+      html,
     });
 
     if (sendError) {

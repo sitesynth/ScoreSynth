@@ -1,0 +1,132 @@
+export const INVITE_SUBJECT = "ScoreSynth is ready — come join the community";
+
+export function buildInviteHtml(): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+</head>
+<body style="margin:0;padding:0;background:#111010;font-family:Georgia,serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#111010;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+
+        <!-- LOGO -->
+        <tr>
+          <td style="padding:0 0 24px;text-align:center;">
+            <a href="https://www.scoresynth.com" style="text-decoration:none;">
+              <img src="https://www.scoresynth.com/logo-scoresynth-email.png" width="180" height="46" alt="ScoreSynth" style="display:inline-block;"/>
+            </a>
+          </td>
+        </tr>
+
+        <!-- BANNER IMAGE -->
+        <tr>
+          <td style="line-height:0;border-radius:16px 16px 0 0;overflow:hidden;">
+            <img src="https://www.scoresynth.com/imagesforemails/invitationbanneremail.png"
+                 width="560" alt="You're Invited"
+                 style="width:100%;max-width:560px;display:block;border-radius:16px 16px 0 0;"/>
+          </td>
+        </tr>
+
+        <!-- BODY -->
+        <tr>
+          <td style="background:#211817;border-left:1px solid rgba(255,255,255,0.07);border-right:1px solid rgba(255,255,255,0.07);padding:40px 44px 36px;">
+
+            <h1 style="margin:0 0 8px;font-size:28px;font-weight:400;color:#ffffff;line-height:1.2;">
+              Welcome to ScoreSynth
+            </h1>
+            <p style="margin:0 0 24px;font-size:13px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;">
+              Sheet Music Community
+            </p>
+
+            <p style="margin:0 0 14px;font-size:15px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.7);line-height:1.75;">
+              Thank you for your interest in ScoreSynth. We&rsquo;ve been building quietly &mdash; and the community is now open.
+            </p>
+            <p style="margin:0 0 14px;font-size:15px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.7);line-height:1.75;">
+              Our <strong style="color:rgba(255,255,255,0.9);">score editor</strong> and <strong style="color:rgba(255,255,255,0.9);">AI music tools</strong> are still in development &mdash; we&rsquo;re taking our time to make them right. But the platform is live and musicians are already sharing, discovering, and downloading sheet music every day.
+            </p>
+            <p style="margin:0 0 32px;font-size:15px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.7);line-height:1.75;">
+              Come join us. Upload your scores, explore the library, and connect with other musicians while the big features take shape.
+            </p>
+
+            <!-- CTA BUTTON -->
+            <table cellpadding="0" cellspacing="0" style="margin:0 auto 36px;">
+              <tr>
+                <td style="background:#c0392b;border-radius:12px;">
+                  <a href="https://www.scoresynth.com/community"
+                     style="display:inline-block;padding:15px 44px;font-family:Arial,sans-serif;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:0.5px;">
+                    Join the Community &rarr;
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- ICON CARDS -->
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="33%" style="text-align:center;padding:16px 8px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                  <div style="margin-bottom:8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 18V5l12-2v13" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="6" cy="18" r="3" stroke="#c0392b" stroke-width="1.5"/>
+                      <circle cx="18" cy="16" r="3" stroke="#c0392b" stroke-width="1.5"/>
+                    </svg>
+                  </div>
+                  <div style="font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.45);line-height:1.4;">Browse<br/>thousands of scores</div>
+                </td>
+                <td width="4%"></td>
+                <td width="33%" style="text-align:center;padding:16px 8px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                  <div style="margin-bottom:8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 3v13M7 11l5 5 5-5" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 19h18" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                  </div>
+                  <div style="font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.45);line-height:1.4;">Download<br/>free &amp; premium</div>
+                </td>
+                <td width="4%"></td>
+                <td width="33%" style="text-align:center;padding:16px 8px;background:rgba(255,255,255,0.03);border-radius:10px;">
+                  <div style="margin-bottom:8px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 16V3M7 8l5-5 5 5" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M3 19h18v-7H3v7z" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div style="font-family:Arial,sans-serif;font-size:11px;color:rgba(255,255,255,0.45);line-height:1.4;">Upload<br/>your own work</div>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+        <!-- DIVIDER -->
+        <tr>
+          <td style="background:#211817;padding:0 44px;border-left:1px solid rgba(255,255,255,0.07);border-right:1px solid rgba(255,255,255,0.07);">
+            <div style="height:1px;background:rgba(255,255,255,0.07);"></div>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="background:#1a1210;border-radius:0 0 16px 16px;padding:24px 44px 32px;border:1px solid rgba(255,255,255,0.07);border-top:none;text-align:center;">
+            <p style="margin:0 0 6px;font-size:12px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.25);">
+              &copy; 2026 ScoreSynth &nbsp;&middot;&nbsp;
+              <a href="https://www.scoresynth.com" style="color:rgba(255,255,255,0.4);text-decoration:none;">scoresynth.com</a>
+              &nbsp;&middot;&nbsp;
+              <a href="https://www.scoresynth.com/privacy" style="color:rgba(255,255,255,0.4);text-decoration:none;">Privacy</a>
+            </p>
+            <p style="margin:0;font-size:11px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.15);">
+              You&rsquo;re receiving this because you previously reached out about ScoreSynth.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}

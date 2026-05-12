@@ -755,8 +755,22 @@ export default function PublicUserProfilePage() {
 
   const handleDeleteScore = async () => {
     if (!currentUser || !deletingScore) return;
-    const supabase = createClient();
-    await supabase.from("scores").delete().eq("id", deletingScore.id).eq("author_id", currentUser.id);
+    if (isAdmin) {
+      const res = await fetch("/api/admin/delete-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scoreId: deletingScore.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Failed to delete score: ${data.error ?? res.statusText}`);
+        setDeletingScore(null);
+        return;
+      }
+    } else {
+      const supabase = createClient();
+      await supabase.from("scores").delete().eq("id", deletingScore.id).eq("author_id", currentUser.id);
+    }
     setUserScores(prev => prev.filter(s => s.id !== deletingScore.id));
     setResourceColls(prev => prev.map(c => {
       const collScores = userScores.filter(s => s.id !== deletingScore.id && s.resource_collection_id === c.id);

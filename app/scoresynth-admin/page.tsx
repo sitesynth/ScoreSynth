@@ -345,8 +345,19 @@ export default function AdminPage() {
   const handleDelete = async (scoreId: string) => {
     if (!confirm("Delete this score? This cannot be undone.")) return;
     setDeletingId(scoreId);
-    const supabase = createClient();
-    await supabase.from("scores").delete().eq("id", scoreId);
+    try {
+      const res = await fetch("/api/admin/delete-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scoreId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Failed to delete score: ${data.error ?? res.statusText}`);
+      }
+    } catch (err) {
+      alert(`Failed to delete score: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
     setDeletingId(null);
     loadScores();
   };

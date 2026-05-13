@@ -314,9 +314,24 @@ export default function ScoreDetailPage() {
     const isCommentAuthor = user?.id === authorId;
     const isScoreAuthor = user?.id === score?.author_id;
     if (!isCommentAuthor && !isScoreAuthor && !isAdmin) return;
-    const supabase = createClient();
-    const { error } = await supabase.from("comments").delete().eq("id", commentId);
-    if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
+
+    if (isScoreAuthor || isAdmin) {
+      const res = await fetch("/api/admin/delete-comment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId }),
+      });
+      if (res.ok) {
+        setComments(prev => prev.filter(c => c.id !== commentId));
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(`Failed to delete comment: ${data.error ?? res.statusText}`);
+      }
+    } else {
+      const supabase = createClient();
+      const { error } = await supabase.from("comments").delete().eq("id", commentId);
+      if (!error) setComments(prev => prev.filter(c => c.id !== commentId));
+    }
     setConfirmDelete(null);
   };
 
@@ -506,7 +521,7 @@ export default function ScoreDetailPage() {
                           <div style={{ display: "flex", gap: "8px", alignItems: "baseline", marginBottom: "4px" }}>
                             <span style={{ fontSize: "13px", fontWeight: 500, color: "#e8dbd8" }}>{name}</span>
                             <span style={{ fontSize: "11px", color: "#6b5452" }}>{time}</span>
-                            {(user?.id === c.author_id || user?.id === score?.author_id) && (
+                            {(user?.id === c.author_id || user?.id === score?.author_id || isAdmin) && (
                               <button
                                 onClick={() => handleDeleteComment(c.id, c.author_id)}
                                 style={{ marginLeft: "4px", background: "none", border: "none", cursor: "pointer", color: "#6b5452", padding: 0, fontSize: "11px" }}
